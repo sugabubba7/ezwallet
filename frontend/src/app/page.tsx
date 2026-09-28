@@ -12,8 +12,8 @@ export default function Home() {
     if (!loading) router.replace(user ? "/dashboard" : "/login");
   }, [user, loading, router]);
   return (
-    <main className="bg-sunrise grid min-h-screen place-items-center">
-      <Loader2 className="h-6 w-6 animate-spin text-leather-900" />
+    <main className="grid min-h-screen place-items-center">
+      <Loader2 className="h-6 w-6 animate-spin text-white" />
     </main>
   );
 }

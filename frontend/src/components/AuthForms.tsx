@@ -109,7 +109,7 @@ export function LoginForm() {
   return (
     <>
       <GoogleButton mode="signin" onCredential={google.onCredential} />
-      {google.error && <p className="mt-2 text-center text-sm text-red-400">{google.error}</p>}
+      {google.error && <p className="note-error mt-3 text-center">{google.error}</p>}
       <Divider />
       <form onSubmit={submit} className="space-y-4" noValidate>
         <div>
@@ -120,14 +120,14 @@ export function LoginForm() {
           <Label htmlFor="password">Password</Label>
           <PasswordField id="password" value={password} onChange={setPassword} autoComplete="current-password" />
         </div>
-        {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300" role="alert">{error}</p>}
+        {error && <p className="note-error" role="alert">{error}</p>}
         <button className="btn-primary w-full" disabled={busy || !email || !password}>
           {busy && <Loader2 className="h-4 w-4 animate-spin" />} Log in
         </button>
       </form>
       <p className="mt-6 text-center text-sm text-white/50">
         New here?{" "}
-        <Link href="/register" className="font-medium text-ember-400 hover:text-ember-300">
+        <Link href="/register" className="font-medium text-ember-300 hover:text-ember-200">
           Create a wallet
         </Link>
       </p>
@@ -172,7 +172,7 @@ export function RegisterForm() {
   return (
     <>
       <GoogleButton mode="signup" onCredential={google.onCredential} />
-      {google.error && <p className="mt-2 text-center text-sm text-red-400">{google.error}</p>}
+      {google.error && <p className="note-error mt-3 text-center">{google.error}</p>}
       <Divider />
       <form onSubmit={submit} className="space-y-4" noValidate>
         <div>
@@ -187,7 +187,7 @@ export function RegisterForm() {
               <span
                 key={i}
                 className={`h-1 flex-1 rounded-full transition ${
-                  password && i < s ? ["bg-red-400", "bg-amber-400", "bg-emerald-400"][s - 1] : "bg-white/10"
+                  password && i < s ? ["bg-ember-700", "bg-ember-400", "bg-ember-200"][s - 1] : "bg-white/10"
                 }`}
               />
             ))}
@@ -204,14 +204,14 @@ export function RegisterForm() {
             </p>
           </div>
         </div>
-        {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300" role="alert">{error}</p>}
+        {error && <p className="note-error" role="alert">{error}</p>}
         <button className="btn-primary w-full" disabled={busy || !valid}>
           {busy && <Loader2 className="h-4 w-4 animate-spin" />} Create wallet
         </button>
       </form>
       <p className="mt-6 text-center text-sm text-white/50">
         Already have a wallet?{" "}
-        <Link href="/login" className="font-medium text-ember-400 hover:text-ember-300">
+        <Link href="/login" className="font-medium text-ember-300 hover:text-ember-200">
           Log in
         </Link>
       </p>

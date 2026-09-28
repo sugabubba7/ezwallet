@@ -5,10 +5,10 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 CATEGORIES = ("personal", "medical", "work", "finance", "travel", "code", "other")
-COLORS = ("sapphire", "ivory", "peach", "mint", "lilac", "graphite")
+COLORS = ("ember", "amber", "cream", "copper", "rust", "noir")
 
 Category = Literal["personal", "medical", "work", "finance", "travel", "code", "other"]
-Color = Literal["sapphire", "ivory", "peach", "mint", "lilac", "graphite"]
+Color = Literal["ember", "amber", "cream", "copper", "rust", "noir"]
 
 _PIN_RE = re.compile(r"^\d{4}$")
 
@@ -119,7 +119,7 @@ class UnlockRequest(BaseModel):
 class CardCreate(BaseModel):
     label: str = Field(min_length=1, max_length=80)
     category: Category = "personal"
-    color: Color = "sapphire"
+    color: Color = "ember"
     content: str = Field(min_length=1, max_length=4000)
 
 
@@ -169,8 +169,10 @@ class ChatOut(BaseModel):
     prompt_tokens: int | None
     output_tokens: int | None
     latency_ms: int | None
+    message_count: int
     is_sample: bool
     created_at: datetime
+    updated_at: datetime
 
 
 class ChatListResponse(BaseModel):
@@ -178,11 +180,29 @@ class ChatListResponse(BaseModel):
 
 
 # ---------- LLM ----------
+class HistoryTurn(BaseModel):
+    """One earlier turn of the current session, held only by the client."""
+
+    role: Literal["user", "model"]
+    text: str = Field(min_length=1, max_length=32000)
+
+
 class ExecuteRequest(BaseModel):
     prompt: str = Field(min_length=1, max_length=16000)
     card_id: int | None = None
+    # Continue an existing session: the client re-sends the transcript it holds
+    # in memory. The server forwards it to Gemini and never stores it.
+    chat_id: int | None = None
+    history: list[HistoryTurn] = Field(default_factory=list, max_length=60)
     title: str | None = Field(default=None, max_length=120)
     tags: list[str] = Field(default_factory=list, max_length=6)
+
+    @field_validator("history")
+    @classmethod
+    def _cap_history(cls, v: list[HistoryTurn]) -> list[HistoryTurn]:
+        if sum(len(t.text) for t in v) > 120_000:
+            raise ValueError("Conversation is too long; start a new chat")
+        return v
 
     @field_validator("tags")
     @classmethod

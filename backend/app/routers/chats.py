@@ -20,7 +20,7 @@ def _owned(db: Session, user: User, chat_id: int) -> ChatSummary:
 @router.get("", response_model=ChatListResponse)
 def list_chats(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ChatListResponse:
     rows = db.scalars(
-        select(ChatSummary).where(ChatSummary.user_id == user.id).order_by(ChatSummary.created_at.desc(), ChatSummary.id.desc())
+        select(ChatSummary).where(ChatSummary.user_id == user.id).order_by(ChatSummary.updated_at.desc(), ChatSummary.id.desc())
     )
     return ChatListResponse(chats=[ChatOut.model_validate(c) for c in rows])
 

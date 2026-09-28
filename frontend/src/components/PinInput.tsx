@@ -73,8 +73,8 @@ export function PinInput({ value, onChange, onComplete, autoFocus, disabled, mas
               e.preventDefault();
               setDigits(e.clipboardData.getData("text"));
             }}
-            className={`${box} rounded-xl border bg-white/[0.04] text-center font-semibold text-white outline-none transition
-              ${error ? "border-red-500/70" : ch ? "border-ember-500/60" : "border-white/10"}
+            className={`${box} rounded-xl border bg-black/25 text-center font-semibold text-white outline-none transition
+              ${error ? "border-ember-300" : ch ? "border-ember-500/60" : "border-white/10"}
               focus:border-ember-500 focus:ring-4 focus:ring-ember-500/20 disabled:opacity-50`}
           />
         );

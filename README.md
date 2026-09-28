@@ -1,10 +1,10 @@
 # EZ Wallet: LLM Data Wallet
 
-A full-stack **LLM Data Wallet**. You keep sensitive context (a writing voice, a project brief, health notes, and so on) in an **encrypted, PIN-locked card vault**. When a prompt needs a card, you attach it and the prompt goes through a **zero-data-retention (ZDR) proxy to Google Gemini**. Past sessions appear in a cover-flow archive that stores **metadata only**.
+A full-stack **LLM Data Wallet**. You keep sensitive context (a writing voice, a project brief, health notes, and so on) in an **encrypted, PIN-locked card vault**. When a prompt needs a card, you attach it and the prompt goes through a **zero-data-retention (ZDR) proxy to Google Gemini**. Past sessions appear in a cover-flow archive that stores **metadata only**: when each chat happened and how many texts were exchanged, never what was said.
 
 | Layer | Stack |
 |---|---|
-| Frontend | Next.js 15 (App Router) · TypeScript · Tailwind CSS · Framer Motion · Lucide React |
+| Frontend | Next.js 15 (App Router) · TypeScript · Tailwind CSS · Framer Motion · Lucide React · one typeface (Inter), an orange + black palette, liquid-glass surfaces |
 | Backend | FastAPI · SQLAlchemy 2 · Alembic · SQLite (`wallet.db`) |
 | Security | argon2id (passlib) · PyJWT in HTTP-only cookies · Fernet (AES-128-CBC + HMAC-SHA256) at rest · Google Identity Services |
 | LLM | Gemini REST API (`generativelanguage.googleapis.com`), `gemini-2.5-flash` by default |
@@ -47,7 +47,7 @@ Open **http://localhost:3000**. It redirects to `/login`. Choose "Create a walle
 ### Run the tests
 
 ```bash
-cd backend && pytest -q          # 29 API tests: status codes, hashing, encryption, ZDR, ownership
+cd backend && pytest -q          # 32 tests: status codes, hashing, encryption, ZDR, ownership, sessions, migrations
 cd frontend && npm run typecheck && npm run build
 ```
 
@@ -60,8 +60,8 @@ cd frontend && npm run typecheck && npm run build
    - **Data Pocket (left):** the cards peek out of the leather pocket, blurred. Click the **orange eye** and enter your PIN, and the cards slide up out of the pocket.
    - **Hover** a card to reveal its secret. Move the mouse away and it is masked again at once. On touch screens, tap to toggle.
    - Tap the dashed **◯** on a card to attach it to your prompt (it turns into a ✓).
-   - **Chat Archive (right):** a 3D cover flow. Drag it, use the ◀◀ ▶ ▶▶ controls or the arrow keys, or click a side card.
-   - **Gemini ZDR Proxy (bottom):** enter a prompt, optionally a title and tags, then **Execute**. The new session card appears in the archive.
+   - **Chat Archive (right):** a 3D cover flow. Each card shows the date and time of the chat, with **how many texts were exchanged** as the subtext. The front card is opaque, and cards further back are progressively blurred and faded. Drag it, use the ◀◀ ▶ ▶▶ controls or the arrow keys, or click a side card.
+   - **Gemini ZDR Proxy (bottom):** a "Search or Ask" pill. Press Enter to send. Attach a context card from the list below it (or press ⌥1–⌥9). Keep replying to continue the same session, and its text count goes up. **New chat** starts over. The transcript lives only in the browser tab.
 3. **Account** (`/account`): change your email, password or vault PIN, or delete the account.
 4. **Check persistence:** stop uvicorn (Ctrl+C), start it again, and log in. Your cards, chat summaries and credentials are all still there, because they live in `backend/wallet.db`.
 
@@ -128,7 +128,7 @@ frontend/
 |---|---|
 | `users` | `email` (unique), `password_hash` (argon2id, nullable for Google-only), `pin_hash` (argon2id), `google_sub` (unique), `pin_failed_attempts`, `pin_locked_until`, `token_version` |
 | `wallet_cards` | `user_id` → users (CASCADE), `label`, `category`, `color`, **`content_encrypted`** (Fernet bytes), `position` |
-| `chat_summaries` | `user_id` → users (CASCADE), `title`, `model`, `tags` (JSON), `card_label`, `prompt_tokens`, `output_tokens`, `latency_ms`, `is_sample`. **There are no prompt or output columns.** |
+| `chat_summaries` | `user_id` → users (CASCADE), `title`, `model`, `tags` (JSON), `card_label`, `message_count`, `prompt_tokens`, `output_tokens`, `latency_ms`, `is_sample`, `created_at`, `updated_at` (last activity). **There are no prompt or output columns.** |
 
 ---
 
@@ -159,7 +159,7 @@ Base path is `/api/v1`. Every request and response body is JSON. Errors always l
 | `GET /chats/{id}` | none | 200 `Chat` | 401, **404** |
 | `DELETE /chats/{id}` | none | 200 | 401, **404** |
 | `GET /llm/status` | none | 200 `{configured, model, endpoint}` | 401 |
-| `POST /llm/execute` | `{prompt, card_id?, title?, tags?}` | 200 `{output, model, chat, retention:"none"}` | 400, 401 (auth or vault locked), 404 card, 502 upstream, 503 no key |
+| `POST /llm/execute` | `{prompt, card_id?, chat_id?, history?: [{role:"user"\|"model", text}], title?, tags?}` | 200 `{output, model, chat, retention:"none"}`. With `chat_id` it continues that session and adds 2 to `message_count` | 400 (invalid, or a sample session), 401 (auth or vault locked), 404 card or chat, 502 upstream, 503 no key |
 
 Auth accepts **either** the HTTP-only `ezw_session` cookie (browser) **or** `Authorization: Bearer <access_token>` (curl, Postman). A resource that belongs to another user returns **404**, never 403, so IDs don't leak.
 
@@ -222,6 +222,11 @@ The browser receives a Google ID token. The backend verifies its signature, audi
 
 Alembic manages the schema, and `app/main.py` runs `alembic upgrade head` inside the FastAPI lifespan, **so a plain `uvicorn` start always leaves the DB current.** `alembic/env.py` reads `DATABASE_URL` from settings, so no connection string lives in `alembic.ini`. `render_as_batch=True` keeps `ALTER TABLE` migrations working on SQLite.
 
+| Revision | Change |
+|---|---|
+| `0001` | Initial schema: users, wallet_cards, chat_summaries |
+| `0002` | Adds `chat_summaries.message_count` and `updated_at` (backfilled from `created_at`), and maps the old card skins to the orange/black palette (`sapphire→ember`, `peach→amber`, `ivory→cream`, `mint→copper`, `lilac→rust`, `graphite→noir`). Reversible |
+
 ```bash
 cd backend
 alembic upgrade head                                   # apply by hand (same as on startup)
@@ -243,7 +248,7 @@ See [JOURNAL.md](JOURNAL.md) for the reasoning behind each layer.
 - **Vault:** a second short-lived JWT (5 minutes) that is only issued after the PIN is verified. There are 5 attempts before a 5-minute lockout (429 + `Retry-After`).
 - **At rest:** card content is encrypted with Fernet. The locked card list never includes content, and the browser drops decrypted text when the vault locks.
 - **Hover reveal:** unless a card is hovered, the DOM holds a fixed-length mask rather than the secret, so the text can't be selected, copied or read from the DOM, and its length isn't leaked.
-- **ZDR proxy:** nothing is logged or persisted except metadata. `Cache-Control: no-store` is set. The API key travels in a header, never the URL, and buffers are scrubbed after each call.
+- **ZDR proxy:** nothing is logged or persisted except metadata. Multi-turn sessions work by having the browser re-send the transcript it holds in memory; the server forwards it and stores only the running message count. `Cache-Control: no-store` is set. The API key travels in a header, never the URL, and buffers are scrubbed after each call.
 - **Hardening:** 404 for other users' resources, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, and cascade deletes on account removal.
 
 ### Zero data retention: what is and isn't guaranteed
@@ -259,5 +264,7 @@ This app never writes prompts, context or outputs to disk, logs or the DB, and i
 | ![](docs/screenshots/login.png) | ![](docs/screenshots/register.png) |
 | **Dashboard (locked)** | **Hover reveal** |
 | ![](docs/screenshots/dashboard-locked.png) | ![](docs/screenshots/hover-reveal.png) |
-| **Account** | **LLM execute** |
-| ![](docs/screenshots/account.png) | ![](docs/screenshots/llm-execute.png) |
+| **Chat archive (date, time, texts exchanged)** | **Multi-turn session + context cards** |
+| ![](docs/screenshots/coverflow.png) | ![](docs/screenshots/llm-execute.png) |
+| **Account** | |
+| ![](docs/screenshots/account.png) | |

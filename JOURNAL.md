@@ -35,7 +35,9 @@ People paste the same sensitive context into LLM chats again and again: their wr
 | **JWT in HTTP-only cookie, plus Bearer fallback** | localStorage token | JavaScript can't read the cookie, so XSS can't steal it. Bearer support keeps the API usable from curl and Postman |
 | **Two-tier auth: session JWT + short-lived vault JWT** | Re-sending the PIN on each call; decrypting on login | The PIN unlocks a 5-minute capability that the server checks on every sensitive call. Closing the tab or waiting re-locks it |
 | **Fernet for card content** | SQLCipher; client-side E2E encryption | Authenticated encryption in a few lines, with a key held in env. E2E would stop the server from forwarding context to Gemini, which is the product's core feature |
-| **Metadata-only chat summaries** | Storing an LLM-generated summary | A generated summary is derived prompt data, which contradicts ZDR. Title, tags, model, token counts and latency are enough for the archive |
+| **Metadata-only chat summaries** | Storing an LLM-generated summary | A generated summary is derived prompt data, which contradicts ZDR. Title, tags, model, date and time, and the **number of texts exchanged** are enough for the archive. The count is what signals how important a chat was |
+| **Client-held transcript for multi-turn** | Storing the conversation server-side | The browser keeps the thread in memory and re-sends it each turn. The server forwards it to Gemini and increments `message_count`. Close the tab and the conversation is gone |
+| **Liquid-glass UI, one typeface, orange + black** | The first multi-hue draft | Direction from the design review: a single family (Inter), orange shades and warm blacks only, and Apple-style liquid glass (backdrop blur + saturation, a specular rim drawn with a masked gradient border, an inner sheen) for the header and every section |
 | **Alembic run in `lifespan`** | `Base.metadata.create_all()` | Real, versioned migrations that still apply themselves on startup, as the brief requires |
 | **Google Identity Services** (ID token) | Firebase Auth | Only a Client ID is needed, with no Firebase project or service account. The backend verifies the token with `google-auth` |
 | **Validation errors → 400** | FastAPI's default 422 | The rubric lists 400 for bad input, so a custom `RequestValidationError` handler normalises it |
@@ -64,12 +66,12 @@ People paste the same sensitive context into LLM chats again and again: their wr
 ## 5. UI and interaction notes
 
 - **Wallet (mockup 1).** The leather pocket is an SVG path with a scooped mouth, dashed "stitching" inset by 9px, and a subtle feTurbulence grain. Cards are absolutely positioned and animated with Framer Motion springs. When unlocking, they are staggered from the front card to the back so they visibly **slide upward** out of the pocket. A hovered card rises just far enough to clear the pocket's mouth.
-- **Cover flow (mockup 2).** Each card's `x`, `rotateY`, `z`, `scale` and brightness come from its distance to the active index, under a 1100px perspective. The control bar reproduces the mockup's glass "player": prev, autoplay, next, a now-playing pill with a progress bar, and a menu showing token and latency metadata.
+- **Cover flow (mockup 2).** Cards use an "energy card" style: an orange-to-deep-red gradient, the chat's time as a large figure, the date beneath it, and a bar plus ring showing texts exchanged relative to your busiest chat. Depth is by distance from the active card. The front card is fully opaque and on top. Neighbours are 50% opaque with a 3.5px blur, and the next ones out are 14% with a 9px blur, so no back-card edge reads through the front. The control bar is a liquid-glass "player".
 - **Accessibility.** PIN boxes support paste, arrows and backspace. Cards are focusable, and focus reveals like hover does. The carousel works with arrow keys. Dialogs close on Esc and have ARIA roles.
 
 ## 6. Testing
 
-- `backend/tests/test_api.py` has 29 tests. They cover every status code, argon2id hash prefixes, Fernet ciphertext at rest, PIN lockout, cross-user 404s, token revocation, cascade delete, and a mocked Gemini transport that asserts the key is sent in a header and the context in the body.
+- `backend/tests/` has 32 tests. They cover the Alembic 0001→0002 data migration, every status code, argon2id hash prefixes, Fernet ciphertext at rest, PIN lockout, cross-user 404s, token revocation, cascade delete, and a mocked Gemini transport that asserts the key is sent in a header and the context in the body.
 - Manual and E2E: register → unlock → hover reveal → attach → execute → restart API → log in with changed email → data present → delete account → login returns 401.
 
 ## 7. Reflection

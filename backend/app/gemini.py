@@ -45,12 +45,24 @@ class GeminiResult:
     latency_ms: int
 
 
-def build_contents(prompt: str, context: str | None, context_label: str | None) -> list[dict]:
+def build_contents(
+    prompt: str,
+    context: str | None,
+    context_label: str | None,
+    history: list[tuple[str, str]] | None = None,
+) -> list[dict]:
+    """Earlier turns (client-held transcript) followed by the new user turn.
+
+    The context card is attached to the newest turn only, so it is sent
+    exactly when the user chose to attach it.
+    """
+    contents: list[dict] = [{"role": role, "parts": [{"text": text}]} for role, text in (history or [])]
     parts: list[dict] = []
     if context:
         parts.append({"text": f"[Wallet context card: {context_label}]\n{context}\n[End of context card]"})
     parts.append({"text": prompt})
-    return [{"role": "user", "parts": parts}]
+    contents.append({"role": "user", "parts": parts})
+    return contents
 
 
 def scrub(*containers: object) -> None:

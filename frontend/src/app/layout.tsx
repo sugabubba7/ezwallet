@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import { PageBackdrop } from "@/components/PageBackdrop";
 import { AuthProvider } from "@/lib/auth";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "EZ Wallet: LLM Data Wallet",
@@ -13,8 +13,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    <html lang="en" className={sans.variable}>
       <body className="font-sans">
+        <PageBackdrop />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

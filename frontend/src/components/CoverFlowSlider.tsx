@@ -1,13 +1,16 @@
 "use client";
 
 /**
- * Horizontal cover-flow of past chat sessions (mockup 2).
- * Only metadata is shown because only metadata is stored (ZDR).
+ * Horizontal cover-flow of past chat sessions.
+ * Only metadata is shown because only metadata is stored (ZDR): when the chat
+ * happened and how many texts were exchanged, never what was said.
+ *
+ * Depth: the front card is fully opaque and sits on top. Neighbours are
+ * semi-opaque and blurred, and the next ones out are blurred almost out of
+ * existence, so no back-card edge ever reads through the front.
  */
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import {
-  AudioWaveform,
-  Cpu,
   FastForward,
   MessagesSquare,
   MoreHorizontal,
@@ -16,10 +19,9 @@ import {
   Rewind,
   ShieldCheck,
   Sparkles,
-  Timer,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Chat } from "@/lib/types";
 
 type Props = {
@@ -36,9 +38,13 @@ export function prettyModel(m: string) {
     .join(" ");
 }
 
-function timeAgo(iso: string) {
-  const t = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z").getTime();
-  const s = Math.max(1, Math.round((Date.now() - t) / 1000));
+/** Backend timestamps are UTC; SQLite drops the offset, so add it back. */
+export function parseUtc(iso: string) {
+  return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : iso + "Z");
+}
+
+export function timeAgo(iso: string) {
+  const s = Math.max(1, Math.round((Date.now() - parseUtc(iso).getTime()) / 1000));
   if (s < 60) return "just now";
   const m = Math.round(s / 60);
   if (m < 60) return `${m}m ago`;
@@ -47,64 +53,87 @@ function timeAgo(iso: string) {
   return `${Math.round(h / 24)}d ago`;
 }
 
-function hash(str: string) {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
-  return Math.abs(h);
+export const textsLabel = (n: number) => `${n} ${n === 1 ? "text" : "texts"}`;
+
+function when(iso: string) {
+  const d = parseUtc(iso);
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); // "8:14 PM"
+  const [clock, meridiem] = time.split(" ");
+  const date = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  return { clock, meridiem, date };
 }
 
-/** Deterministic "album art" per chat: warm gradients + orbs. */
-function artFor(chat: Chat) {
-  const h = hash(chat.title + chat.id);
-  const palettes = [
-    ["#2b1408", "#b8461a", "#f6b25c"],
-    ["#101826", "#3b72c4", "#f2c47a"],
-    ["#1a0f22", "#8b3fa8", "#f59e6b"],
-    ["#0f1f1a", "#1f7a55", "#e8d27a"],
-    ["#26100c", "#c2412d", "#ffd28a"],
-    ["#141414", "#e8702a", "#fbe3c2"],
-  ];
-  const [a, b, c] = palettes[h % palettes.length];
-  const x = 20 + (h % 60);
-  const y = 20 + ((h >> 5) % 60);
-  return {
-    background: `radial-gradient(circle at ${x}% ${y}%, ${c} 0%, ${b} 38%, ${a} 78%)`,
-    orb: `radial-gradient(circle at 30% 30%, rgba(255,255,255,.55), rgba(255,255,255,0) 60%)`,
-    orbPos: { left: `${(h >> 3) % 55}%`, top: `${(h >> 7) % 50}%` },
-  };
-}
+type Pose = { x: number; rotateY: number; scale: number; opacity: number; blur: number; brightness: number; zIndex: number };
 
-function initials(title: string) {
-  return title
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join("");
-}
-
-function positionFor(offset: number) {
+function poseFor(offset: number): Pose {
   const abs = Math.abs(offset);
   const sign = Math.sign(offset);
-  const x = abs === 0 ? 0 : sign * (150 + (abs - 1) * 92);
-  return {
-    x,
-    rotateY: -sign * Math.min(abs, 1) * 38,
-    scale: 1 - Math.min(abs, 3) * 0.1,
-    z: -abs * 120,
-    opacity: abs > 2 ? 0 : 1,
-    zIndex: 10 - abs,
-    filter: `blur(${abs >= 2 ? 1 : 0}px) brightness(${1 - abs * 0.14})`,
-  };
+  if (abs === 0) return { x: 0, rotateY: 0, scale: 1, opacity: 1, blur: 0, brightness: 1, zIndex: 30 };
+  if (abs === 1) return { x: sign * 168, rotateY: -sign * 28, scale: 0.84, opacity: 0.5, blur: 3.5, brightness: 0.78, zIndex: 20 };
+  if (abs === 2) return { x: sign * 272, rotateY: -sign * 34, scale: 0.7, opacity: 0.14, blur: 9, brightness: 0.6, zIndex: 10 };
+  return { x: sign * 330, rotateY: -sign * 38, scale: 0.6, opacity: 0, blur: 12, brightness: 0.5, zIndex: 0 };
+}
+
+/** Small ring like the "Mindful" gauge in the inspiration. */
+function Ring({ value }: { value: number }) {
+  const r = 7;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg viewBox="0 0 18 18" className="h-[18px] w-[18px] -rotate-90" aria-hidden>
+      <circle cx="9" cy="9" r={r} fill="none" stroke="rgba(255,255,255,.22)" strokeWidth="3" />
+      <circle cx="9" cy="9" r={r} fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${Math.max(0.06, value) * c} ${c}`} />
+    </svg>
+  );
+}
+
+function ChatCard({ chat, maxCount, focused }: { chat: Chat; maxCount: number; focused: boolean }) {
+  const w = when(chat.created_at);
+  const share = Math.min(1, chat.message_count / Math.max(1, maxCount));
+  return (
+    <div className="energy-card flex h-[304px] flex-col rounded-[30px] p-5 text-white">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-medium text-white/85">{prettyModel(chat.model)}</span>
+        {chat.is_sample && <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10.5px] text-white/85">Sample</span>}
+      </div>
+
+      <h3 className="mt-3 line-clamp-2 text-[18px] font-semibold leading-snug">{chat.title}</h3>
+      <p className="mt-1 truncate text-[12px] text-white/55">
+        {chat.card_label ? `◈ ${chat.card_label}` : chat.tags.length ? chat.tags.map((t) => `#${t}`).join("  ") : "No context card"}
+      </p>
+
+      <div className="mt-auto">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[42px] font-semibold leading-none tracking-tight">{w.clock}</span>
+          <span className="text-[15px] font-medium text-white/60">{w.meridiem}</span>
+        </div>
+        <p className="mt-1 text-[13px] text-white/65">{w.date}</p>
+
+        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/15">
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: "linear-gradient(90deg, rgba(255,255,255,.12), #fff)" }}
+            initial={false}
+            animate={{ width: `${Math.max(8, share * 100)}%` }}
+            transition={{ duration: focused ? 0.6 : 0 }}
+          />
+        </div>
+        <div className="mt-3 flex items-center gap-2 text-[13px]">
+          <Ring value={share} />
+          <span className="font-semibold">{chat.message_count}</span>
+          <span className="text-white/60">texts exchanged</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
   const n = chats.length;
   const current = chats[Math.min(index, n - 1)];
+  const maxCount = useMemo(() => chats.reduce((m, c) => Math.max(m, c.message_count), 0), [chats]);
 
   // Focus a specific chat when asked (e.g. right after a new execution).
   useEffect(() => {
@@ -130,11 +159,8 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
     else if (info.offset.x > 50 || info.velocity.x > 400) go(-1);
   };
 
-  const art = useMemo(() => (current ? artFor(current) : null), [current]);
-
   return (
     <div
-      ref={rootRef}
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") go(1);
@@ -144,15 +170,16 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
       aria-roledescription="carousel"
       aria-label="Chat session summaries"
     >
-      {/* Header, in place of the mockup's Spotify mark */}
-      <div className="flex items-center justify-center gap-2 pt-6 text-[#fbe3c2]/80">
-        <MessagesSquare className="h-6 w-6" />
-        <span className="text-xl font-semibold tracking-tight">Chat Archive</span>
+      <div className="flex items-center justify-between px-6 pt-5">
+        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-white">
+          <MessagesSquare className="h-4 w-4" /> Chat Archive
+        </h2>
+        <span className="chip bg-black/20 text-white/80">{n} sessions</span>
       </div>
 
       {/* Stage */}
       <motion.div
-        className="relative mx-auto mt-6 h-[330px] w-full cursor-grab touch-pan-y active:cursor-grabbing"
+        className="relative mx-auto mt-6 h-[320px] w-full cursor-grab touch-pan-y overflow-hidden active:cursor-grabbing"
         style={{ perspective: 1100 }}
         drag={n > 1 ? "x" : false}
         dragConstraints={{ left: 0, right: 0 }}
@@ -160,73 +187,46 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
         onDragEnd={onDragEnd}
       >
         {n === 0 ? (
-          <div className="absolute left-1/2 top-2 w-[230px] -translate-x-1/2">
-            <div className="glass rounded-[26px] p-3 shadow-2xl">
-              <div className="grid aspect-square place-items-center rounded-[18px] border border-dashed border-white/30 bg-black/10">
-                <Sparkles className="h-10 w-10 text-white/60" />
-              </div>
-              <div className="px-1 pb-1 pt-3 text-center">
-                <div className="font-semibold text-white/90">No sessions yet</div>
-                <div className="text-xs text-white/60">Run a prompt below to start your archive</div>
-              </div>
+          <div className="absolute left-1/2 top-1 w-[244px] -translate-x-1/2">
+            <div className="energy-card flex h-[304px] flex-col items-center justify-center rounded-[30px] p-6 text-center text-white">
+              <Sparkles className="h-9 w-9 text-white/80" />
+              <div className="mt-4 text-[18px] font-semibold">No sessions yet</div>
+              <div className="mt-1 text-[13px] text-white/65">Ask Gemini below to start your archive</div>
             </div>
           </div>
         ) : (
           chats.map((chat, i) => {
             let offset = i - index;
-            // shortest way round so the loop looks continuous
             if (n > 4) {
+              // shortest way round so the loop feels continuous
               if (offset > n / 2) offset -= n;
               if (offset < -n / 2) offset += n;
             }
             if (Math.abs(offset) > 3) return null;
-            const p = positionFor(offset);
-            const a = artFor(chat);
+            const p = poseFor(offset);
             const isCenter = offset === 0;
             return (
               <motion.button
                 type="button"
                 key={chat.id}
                 data-testid="coverflow-card"
-                className="absolute left-1/2 top-0 w-[230px] text-left"
-                style={{ zIndex: p.zIndex, marginLeft: -115, transformStyle: "preserve-3d" }}
+                className="absolute left-1/2 top-1 w-[244px] text-left"
+                style={{ zIndex: p.zIndex, marginLeft: -122, pointerEvents: p.opacity < 0.1 ? "none" : "auto" }}
                 initial={false}
-                animate={{ x: p.x, rotateY: p.rotateY, scale: p.scale, z: p.z, opacity: p.opacity, filter: p.filter }}
-                transition={{ type: "spring", stiffness: 210, damping: 26 }}
+                animate={{
+                  x: p.x,
+                  rotateY: p.rotateY,
+                  scale: p.scale,
+                  opacity: p.opacity,
+                  filter: `blur(${p.blur}px) brightness(${p.brightness})`,
+                }}
+                transition={{ type: "spring", stiffness: 210, damping: 28 }}
                 onClick={() => !isCenter && setIndex(i)}
                 aria-current={isCenter}
-                aria-label={`${chat.title}, ${prettyModel(chat.model)}`}
+                tabIndex={isCenter ? 0 : -1}
+                aria-label={`${chat.title}, ${textsLabel(chat.message_count)}`}
               >
-                <div
-                  className={`rounded-[26px] border border-white/25 bg-[#b0662a]/85 p-3 backdrop-blur-xl ${isCenter ? "shadow-[0_30px_60px_-15px_rgba(0,0,0,.55)]" : "shadow-xl"}`}
-                  style={{ borderColor: isCenter ? "rgba(255,230,200,.45)" : undefined }}
-                >
-                  <div className="relative aspect-square overflow-hidden rounded-[18px]" style={{ background: a.background }}>
-                    <div className="absolute h-28 w-28 rounded-full blur-md" style={{ background: a.orb, ...a.orbPos }} />
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(0,0,0,.45),transparent_60%)]" />
-                    <span className="absolute left-3 top-3 rounded-full bg-black/30 px-2 py-0.5 text-[10px] font-medium text-white/85 backdrop-blur">
-                      {prettyModel(chat.model)}
-                    </span>
-                    {chat.is_sample && (
-                      <span className="absolute right-3 top-3 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">Sample</span>
-                    )}
-                    <span className="absolute bottom-3 left-4 text-5xl font-black tracking-tighter text-white/90 drop-shadow-lg">{initials(chat.title)}</span>
-                    {chat.card_label && (
-                      <span className="absolute bottom-4 right-3 max-w-[110px] truncate rounded-full bg-black/35 px-2 py-0.5 text-[10px] text-[#fbe3c2] backdrop-blur" title={`Context card: ${chat.card_label}`}>
-                        ◈ {chat.card_label}
-                      </span>
-                    )}
-                  </div>
-                  <div className="px-1 pb-1 pt-3 text-center">
-                    <div className="truncate text-[17px] font-semibold text-white/95">{chat.title}</div>
-                    <div className="truncate text-[12.5px] text-white/65">{prettyModel(chat.model)}</div>
-                    <div className={`mt-2 flex h-5 justify-center gap-1 overflow-hidden transition-opacity ${isCenter ? "opacity-100" : "opacity-0"}`}>
-                      {chat.tags.slice(0, 3).map((t) => (
-                        <span key={t} className="rounded-full bg-white/15 px-2 py-0.5 text-[10.5px] text-white/85">#{t}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <ChatCard chat={chat} maxCount={maxCount} focused={isCenter} />
               </motion.button>
             );
           })
@@ -234,8 +234,8 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
       </motion.div>
 
       {/* Control bar */}
-      <div className="glass mx-3 mb-3 mt-auto flex items-center gap-2 rounded-full px-3 py-2.5 sm:mx-5 sm:gap-3 sm:px-5">
-        <div className="flex items-center gap-1 text-white/85">
+      <div className="liquid-glass mx-3 mb-3 mt-auto flex items-center gap-2 rounded-full px-3 py-2 sm:mx-5 sm:gap-3 sm:px-4">
+        <div className="flex items-center gap-0.5 text-white">
           <CtrlBtn label="Previous session" onClick={() => go(-1)} disabled={n < 2}>
             <Rewind className="h-5 w-5" fill="currentColor" />
           </CtrlBtn>
@@ -249,21 +249,22 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
 
         {/* now-playing pill */}
         <div className="relative min-w-0 flex-1">
-          <div className="flex items-center gap-3 overflow-hidden rounded-2xl bg-[#1f1a17]/85 p-1.5 pr-2 ring-1 ring-white/5">
-            <div className="h-10 w-10 shrink-0 rounded-lg" style={{ background: art?.background ?? "rgba(255,255,255,.08)" }} />
+          <div className="flex items-center gap-3 overflow-hidden rounded-2xl bg-ink-950/70 p-1.5 pr-2 ring-1 ring-white/10">
+            <div className="energy-card grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[12px] font-semibold text-white">
+              {current ? current.message_count : "–"}
+            </div>
             <div className="min-w-0 flex-1">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div key={current?.id ?? "none"} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>
                   <div className="truncate text-[13px] font-medium text-white">{current?.title ?? "Nothing here yet"}</div>
-                  <div className="truncate text-[11px] text-white/50">
-                    {current ? `${prettyModel(current.model)} · ${timeAgo(current.created_at)}` : "Metadata only"}
+                  <div className="truncate text-[11px] text-white/55">
+                    {current ? `${textsLabel(current.message_count)} · active ${timeAgo(current.updated_at)}` : "Metadata only"}
                   </div>
                 </motion.div>
               </AnimatePresence>
             </div>
-            <AudioWaveform className="hidden h-4 w-4 shrink-0 text-white/40 sm:block" />
             <button
-              className="shrink-0 rounded-md p-1 text-white/50 hover:bg-white/10 hover:text-white disabled:opacity-30"
+              className="shrink-0 rounded-md p-1 text-white/60 hover:bg-white/10 hover:text-white disabled:opacity-30"
               onClick={() => setMenuOpen((o) => !o)}
               disabled={!current}
               aria-label="Session options"
@@ -272,7 +273,7 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
             </button>
           </div>
           <div className="absolute bottom-0 left-2 right-2 h-[3px] overflow-hidden rounded-full bg-white/10">
-            <motion.div className="h-full rounded-full bg-white/80" animate={{ width: n ? `${((index + 1) / n) * 100}%` : "0%" }} />
+            <motion.div className="h-full rounded-full bg-ember-300" animate={{ width: n ? `${((index + 1) / n) * 100}%` : "0%" }} />
           </div>
           <AnimatePresence>
             {menuOpen && current && (
@@ -280,15 +281,16 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 6 }}
-                className="absolute bottom-full right-0 z-20 mb-2 w-60 rounded-xl bg-[#1f1a17] p-2 text-xs text-white/75 shadow-2xl ring-1 ring-white/10"
+                className="absolute bottom-full right-0 z-40 mb-2 w-64 rounded-2xl bg-ink-900 p-2 text-xs text-white/80 shadow-2xl ring-1 ring-white/10"
               >
                 <div className="space-y-1.5 px-2 py-1.5">
-                  <Meta icon={Cpu} label="Tokens" value={current.prompt_tokens != null ? `${current.prompt_tokens} in · ${current.output_tokens ?? 0} out` : "n/a"} />
-                  <Meta icon={Timer} label="Latency" value={current.latency_ms != null ? `${current.latency_ms} ms` : "n/a"} />
-                  <Meta icon={ShieldCheck} label="Stored" value="Title, tags, metrics" />
+                  <Meta label="Started" value={`${when(current.created_at).clock} ${when(current.created_at).meridiem} · ${when(current.created_at).date}`} />
+                  <Meta label="Texts" value={String(current.message_count)} />
+                  <Meta label="Last turn" value={current.prompt_tokens != null ? `${current.prompt_tokens} → ${current.output_tokens ?? 0} tokens` : "n/a"} />
+                  <Meta label="Latency" value={current.latency_ms != null ? `${current.latency_ms} ms` : "n/a"} />
                 </div>
                 <button
-                  className="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-red-300 hover:bg-red-500/10"
+                  className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-2 text-ember-200 hover:bg-white/5"
                   onClick={() => {
                     setMenuOpen(false);
                     onDelete(current);
@@ -301,14 +303,14 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
           </AnimatePresence>
         </div>
 
-        <div className="hidden items-center gap-1 text-white/80 sm:flex">
-          <span className="grid h-9 w-9 place-items-center" title="Zero data retention: prompts and outputs are never stored">
+        <div className="hidden items-center gap-1 text-white sm:flex">
+          <span className="grid h-9 w-9 place-items-center" title="Zero data retention: only when and how much, never what">
             <ShieldCheck className="h-5 w-5" />
           </span>
-          <span className="min-w-[44px] text-center text-xs tabular-nums text-white/70">{n ? `${index + 1}/${n}` : "0/0"}</span>
+          <span className="min-w-[40px] text-center text-xs tabular-nums text-white/75">{n ? `${index + 1}/${n}` : "0/0"}</span>
         </div>
       </div>
-      <p className="pb-4 text-center text-[11px] text-white/55">Metadata only · zero data retention</p>
+      <p className="pb-4 text-center text-[11px] text-white/60">Metadata only · zero data retention</p>
     </div>
   );
 }
@@ -321,12 +323,11 @@ function CtrlBtn({ children, label, onClick, disabled }: { children: React.React
   );
 }
 
-function Meta({ icon: Icon, label, value }: { icon: typeof Cpu; label: string; value: string }) {
+function Meta({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <Icon className="h-3.5 w-3.5 text-white/40" />
+    <div className="flex items-center gap-3">
       <span className="text-white/45">{label}</span>
-      <span className="ml-auto text-white/85">{value}</span>
+      <span className="ml-auto truncate text-right text-white/90">{value}</span>
     </div>
   );
 }

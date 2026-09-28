@@ -57,7 +57,7 @@ export function PinModal({ open, onClose, onSubmit }: Props) {
         <div className="mt-6" key={shakeKey}>
           <PinInput value={pin} onChange={setPin} onComplete={submit} autoFocus disabled={busy} error={!!error} size="lg" />
         </div>
-        <p className="mt-4 min-h-[20px] text-sm text-red-400" role="alert">
+        <p className="mt-4 min-h-[20px] text-sm text-ember-200" role="alert">
           {error}
         </p>
         <button className="btn-primary mt-2 w-full" disabled={busy || pin.length !== 4}>

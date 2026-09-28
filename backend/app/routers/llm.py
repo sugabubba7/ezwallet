@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
@@ -32,17 +32,29 @@ def execute(
     settings = get_settings()
     response.headers["Cache-Control"] = "no-store"
 
+    # Continuing a session? Resolve it first so a bad id fails before any upstream call.
+    chat: ChatSummary | None = None
+    if body.chat_id is not None:
+        chat = db.get(ChatSummary, body.chat_id)
+        if not chat or chat.user_id != user.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Chat summary not found")
+        if chat.is_sample:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sample sessions can't be continued; start a new chat")
+
     card_label: str | None = None
+    card_category: str | None = None
     context: str | None = None
     if body.card_id is not None:
         card = get_owned_card(db, user, body.card_id)  # 404 if not the user's
         if not vault_is_unlocked(request, user):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Vault is locked. Enter your PIN to use a context card.")
-        card_label = card.label
+        card_label, card_category = card.label, card.category
         context = decrypt_text(card.content_encrypted)
 
-    contents = gemini.build_contents(body.prompt, context, card_label)
-    context = None  # drop our reference to the plaintext immediately
+    history = [(t.role, t.text) for t in body.history]
+    contents = gemini.build_contents(body.prompt, context, card_label, history)
+    context = None  # drop our references to plaintext immediately
+    history.clear()
     try:
         result = gemini.generate(contents, settings.gemini_model)
     except gemini.GeminiNotConfigured:
@@ -55,16 +67,25 @@ def execute(
     finally:
         gemini.scrub(contents)
 
-    # Persist METADATA ONLY: never the prompt, context or output.
-    tags = list(body.tags)
-    if card_label and len(tags) < 6 and card.category not in (t.lower() for t in tags):
-        tags.append(card.category)
-    title = (body.title or "").strip() or f"Session · {datetime.now().strftime('%b %d, %H:%M')}"
-    chat = ChatSummary(
-        user_id=user.id, title=title, model=settings.gemini_model, tags=tags, card_label=card_label,
-        prompt_tokens=result.prompt_tokens, output_tokens=result.output_tokens, latency_ms=result.latency_ms,
-    )
-    db.add(chat)
+    # Persist METADATA ONLY: never the prompt, context, history or output.
+    now = datetime.now(timezone.utc)
+    if chat is None:
+        tags = list(body.tags)
+        if card_category and len(tags) < 6 and card_category not in (t.lower() for t in tags):
+            tags.append(card_category)
+        title = (body.title or "").strip() or f"Session · {datetime.now().strftime('%b %d, %H:%M')}"
+        chat = ChatSummary(
+            user_id=user.id, title=title, model=settings.gemini_model, tags=tags, card_label=card_label,
+            message_count=0, created_at=now,
+        )
+        db.add(chat)
+    elif card_label and not chat.card_label:
+        chat.card_label = card_label
+    chat.message_count = (chat.message_count or 0) + 2  # this user text + the model's reply
+    chat.updated_at = now
+    chat.prompt_tokens = result.prompt_tokens
+    chat.output_tokens = result.output_tokens
+    chat.latency_ms = result.latency_ms
     db.commit()
 
     output = result.text

@@ -42,7 +42,7 @@ class WalletCard(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     label: Mapped[str] = mapped_column(String(80))
     category: Mapped[str] = mapped_column(String(32), default="personal")
-    color: Mapped[str] = mapped_column(String(32), default="sapphire")
+    color: Mapped[str] = mapped_column(String(32), default="ember")
     # Fernet ciphertext of the sensitive context. Never stored in plaintext.
     content_encrypted: Mapped[bytes] = mapped_column(LargeBinary)
     position: Mapped[int] = mapped_column(Integer, default=0)
@@ -71,7 +71,10 @@ class ChatSummary(Base):
     prompt_tokens: Mapped[int | None] = mapped_column(Integer)
     output_tokens: Mapped[int | None] = mapped_column(Integer)
     latency_ms: Mapped[int | None] = mapped_column(Integer)
+    # Total texts exchanged (user + model). A count, never the texts themselves.
+    message_count: Mapped[int] = mapped_column(Integer, default=2, server_default="2")
     is_sample: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)  # last activity
 
     user: Mapped[User] = relationship(back_populates="chats")

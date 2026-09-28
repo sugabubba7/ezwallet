@@ -110,7 +110,7 @@ export function WalletContainer(props: Props) {
       <motion.div className="relative" animate={{ height }} initial={false} transition={spring}>
         {/* -------- Cards -------- */}
         {list.map((card, i) => {
-          const theme = CARD_THEMES[card.color] ?? CARD_THEMES.sapphire;
+          const theme = CARD_THEMES[card.color] ?? CARD_THEMES.ember;
           const Icon = (CATEGORY_META[card.category] ?? CATEGORY_META.other).icon;
           const isHover = unlocked && hoverId === card.id;
           const isSelected = unlocked && selectedId === card.id;
@@ -194,7 +194,7 @@ export function WalletContainer(props: Props) {
               {/* Body: only rendered with real text while revealed */}
               <div className={`px-5 pb-4 transition-opacity duration-150 ${isHover ? "opacity-100" : "opacity-0"}`}>
                 <div
-                  className="h-[62px] overflow-hidden rounded-xl px-3 py-2 font-mono text-[12px] leading-[1.45]"
+                  className="h-[62px] overflow-hidden rounded-xl px-3 py-2 text-[12.5px] leading-[1.45]"
                   style={{ background: "rgba(0,0,0,.07)", color: theme.text }}
                 >
                   <AnimatePresence mode="wait" initial={false}>
@@ -249,8 +249,8 @@ export function WalletContainer(props: Props) {
           <svg width={width} height={POCKET_H} className="absolute inset-0 overflow-visible" aria-hidden>
             <defs>
               <linearGradient id="leather-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#1f1f1f" />
-                <stop offset="100%" stopColor="#141414" />
+                <stop offset="0%" stopColor="#1d1612" />
+                <stop offset="100%" stopColor="#120d0a" />
               </linearGradient>
               <radialGradient id="leather-sheen" cx="50%" cy="0%" r="80%">
                 <stop offset="0%" stopColor="rgba(255,255,255,.07)" />
@@ -269,7 +269,7 @@ export function WalletContainer(props: Props) {
             <path d={pocketPath(width, POCKET_H)} fill="url(#leather-fill)" filter="url(#pocket-shadow)" />
             <path d={pocketPath(width, POCKET_H)} fill="url(#leather-sheen)" />
             <path d={pocketPath(width, POCKET_H)} fill="#fff" filter="url(#leather-grain)" />
-            <path d={pocketPath(width, POCKET_H, 9)} fill="none" stroke="#7a3f1d" strokeOpacity=".75" strokeWidth="1.3" strokeDasharray="5 4" />
+            <path d={pocketPath(width, POCKET_H, 9)} fill="none" stroke="#8a4a22" strokeOpacity=".75" strokeWidth="1.3" strokeDasharray="5 4" />
           </svg>
 
           <div className="relative flex h-full flex-col items-center px-8 text-center" style={{ paddingTop: NOTCH + 42 }}>
@@ -292,7 +292,7 @@ export function WalletContainer(props: Props) {
                     </button>
                     <button
                       onClick={onLock}
-                      className="grid h-12 w-12 place-items-center rounded-full bg-[#1b1b1b] shadow-glow transition hover:scale-105"
+                      className="grid h-12 w-12 place-items-center rounded-full bg-ink-900 shadow-glow transition hover:scale-105"
                       aria-label="Lock vault"
                       title="Lock vault"
                     >
@@ -314,7 +314,7 @@ export function WalletContainer(props: Props) {
                   <p className="mt-2 text-xs text-white/40">Enter PIN to unlock</p>
                   <button
                     onClick={onUnlockRequest}
-                    className="mt-4 grid h-14 w-14 place-items-center rounded-full bg-[#1b1b1b] shadow-glow transition hover:scale-105"
+                    className="mt-4 grid h-14 w-14 place-items-center rounded-full bg-ink-900 shadow-glow transition hover:scale-105"
                     aria-label="Reveal cards"
                     data-testid="unlock-eye"
                   >

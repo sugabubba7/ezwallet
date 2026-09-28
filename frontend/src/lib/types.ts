@@ -9,7 +9,7 @@ export type User = {
 };
 
 export type Category = "personal" | "medical" | "work" | "finance" | "travel" | "code" | "other";
-export type CardColor = "sapphire" | "ivory" | "peach" | "mint" | "lilac" | "graphite";
+export type CardColor = "ember" | "amber" | "cream" | "copper" | "rust" | "noir";
 
 export type CardMeta = {
   id: number;
@@ -31,8 +31,10 @@ export type Chat = {
   prompt_tokens: number | null;
   output_tokens: number | null;
   latency_ms: number | null;
+  message_count: number;
   is_sample: boolean;
   created_at: string;
+  updated_at: string;
 };
 
 export type LlmStatus = { configured: boolean; model: string; endpoint: string };

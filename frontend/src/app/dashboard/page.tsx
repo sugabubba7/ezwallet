@@ -2,7 +2,7 @@
 
 import { KeyRound, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CardEditorModal, type CardDraft } from "@/components/CardEditorModal";
 import { CoverFlowSlider } from "@/components/CoverFlowSlider";
 import { LlmConsole } from "@/components/LlmConsole";
@@ -132,8 +132,6 @@ export default function Dashboard() {
     }
   };
 
-  const selectedCard = useMemo(() => revealed?.find((c) => c.id === selectedId) ?? null, [revealed, selectedId]);
-
   if (loading || !user) {
     return (
       <main className="grid min-h-screen place-items-center">
@@ -143,34 +141,34 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(80%_60%_at_100%_0%,rgba(232,112,42,.14),transparent),radial-gradient(60%_50%_at_0%_100%,rgba(95,142,168,.14),transparent)]">
+    <div className="min-h-screen overflow-x-hidden">
       <TopBar llm={llm} />
 
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/35">Signed in as</p>
-            <h1 className="mt-1 break-all text-2xl font-semibold sm:text-3xl">{user.email}</h1>
+            <p className="eyebrow">Signed in as</p>
+            <h1 className="mt-1 break-all text-2xl font-semibold text-white sm:text-3xl">{user.email}</h1>
           </div>
-          <p className="max-w-md text-sm text-white/45">
+          <p className="max-w-md text-sm text-white/70">
             Keep sensitive context sealed in your wallet. Attach a card only when a prompt needs it; Gemini sees it once and nothing is retained.
           </p>
         </div>
 
         {!user.has_pin && (
-          <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-ember-500/30 bg-ember-500/10 px-5 py-4 text-sm">
-            <KeyRound className="h-5 w-5 text-ember-400" />
-            <span className="flex-1 text-white/80">Set a 4-digit vault PIN to unlock your context cards.</span>
+          <div className="liquid-glass mb-6 flex flex-wrap items-center gap-3 rounded-3xl px-5 py-4 text-sm">
+            <KeyRound className="h-5 w-5 text-white" />
+            <span className="flex-1 text-white">Set a 4-digit vault PIN to unlock your context cards.</span>
             <Link href="/account#pin" className="btn-primary !py-2">Set PIN</Link>
           </div>
         )}
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
           {/* Section B: wallet */}
-          <section className="bg-sunrise relative overflow-hidden rounded-[32px] px-4 pb-8 pt-6 sm:px-8" aria-label="Encrypted data pocket">
-            <div className="mb-2 flex items-center justify-between text-leather-900">
+          <section className="liquid-glass rounded-[36px] px-4 pb-8 pt-5 sm:px-8" aria-label="Encrypted data pocket">
+            <div className="mb-2 flex items-center justify-between text-white">
               <h2 className="text-sm font-semibold uppercase tracking-[0.16em]">Data Pocket</h2>
-              <span className="rounded-full bg-black/10 px-2.5 py-1 text-[11px] font-medium">{cards.length} cards · AES-encrypted</span>
+              <span className="chip bg-black/20 text-white/80">{cards.length} cards · encrypted</span>
             </div>
             <WalletContainer
               cards={cards}
@@ -187,7 +185,7 @@ export default function Dashboard() {
           </section>
 
           {/* Section A: cover flow */}
-          <section className="bg-amber-bloom relative min-h-[560px] overflow-hidden rounded-[32px]" aria-label="Chat summaries">
+          <section className="liquid-glass min-h-[560px] overflow-hidden rounded-[36px]" aria-label="Chat summaries">
             <CoverFlowSlider chats={chats} activeId={focusChat} onDelete={deleteChat} />
           </section>
         </div>
@@ -195,15 +193,17 @@ export default function Dashboard() {
         <div className="mt-6">
           <LlmConsole
             llm={llm}
-            selectedCard={selectedCard}
-            vaultUnlocked={revealed !== null}
-            onDetach={() => setSelectedId(null)}
+            cards={revealed}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onUnlockRequest={() => (user.has_pin ? setPinOpen(true) : flash("Set a vault PIN in Account first"))}
             onVaultLocked={() => {
               lockLocal();
               setPinOpen(true);
             }}
-            onExecuted={(chat) => {
-              setChats((cs) => [chat, ...cs]);
+            onChatUpdated={(chat) => {
+              // a new or continued session moves to the front of the archive
+              setChats((cs) => [chat, ...cs.filter((c) => c.id !== chat.id)]);
               setFocusChat(chat.id);
             }}
           />
@@ -224,14 +224,14 @@ export default function Dashboard() {
         </p>
         <div className="mt-6 flex justify-end gap-2">
           <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>Cancel</button>
-          <button className="btn-primary !bg-red-600 hover:!bg-red-500" onClick={() => confirmDelete && deleteCard(confirmDelete)}>
+          <button className="btn-danger" onClick={() => confirmDelete && deleteCard(confirmDelete)}>
             Delete
           </button>
         </div>
       </Modal>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-[120] -translate-x-1/2 rounded-full bg-white px-4 py-2 text-sm font-medium text-leather-900 shadow-2xl" role="status">
+        <div className="fixed bottom-6 left-1/2 z-[120] -translate-x-1/2 rounded-full bg-white px-4 py-2 text-sm font-medium text-ink-950 shadow-2xl" role="status">
           {toast}
         </div>
       )}

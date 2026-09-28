@@ -16,7 +16,7 @@ type Props = {
 };
 
 export function CardEditorModal({ open, initial, onClose, onSave }: Props) {
-  const [draft, setDraft] = useState<CardDraft>({ label: "", category: "personal", color: "sapphire", content: "" });
+  const [draft, setDraft] = useState<CardDraft>({ label: "", category: "personal", color: "ember", content: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +26,7 @@ export function CardEditorModal({ open, initial, onClose, onSave }: Props) {
     setDraft(
       initial
         ? { label: initial.label, category: initial.category, color: initial.color, content: initial.content }
-        : { label: "", category: "personal", color: "sapphire", content: "" },
+        : { label: "", category: "personal", color: "ember", content: "" },
     );
   }, [open, initial]);
 
@@ -82,7 +82,7 @@ export function CardEditorModal({ open, initial, onClose, onSave }: Props) {
                   key={c}
                   onClick={() => setDraft({ ...draft, category: c })}
                   className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition ${
-                    on ? "bg-ember-500 text-white" : "bg-white/[0.06] text-white/60 hover:text-white"
+                    on ? "bg-ember-500 text-white" : "bg-white/[0.07] text-white/65 hover:text-white"
                   }`}
                 >
                   <M.icon className="h-3.5 w-3.5" /> {M.label}
@@ -116,7 +116,7 @@ export function CardEditorModal({ open, initial, onClose, onSave }: Props) {
           </label>
           <textarea
             id="card-content"
-            className="input min-h-[120px] resize-y font-mono text-[13px]"
+            className="input min-h-[120px] resize-y text-[14px]"
             maxLength={4000}
             value={draft.content}
             onChange={(e) => setDraft({ ...draft, content: e.target.value })}
@@ -126,7 +126,7 @@ export function CardEditorModal({ open, initial, onClose, onSave }: Props) {
           <div className="mt-1 text-right text-[11px] text-white/30">{draft.content.length}/4000</div>
         </div>
 
-        {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
+        {error && <p className="note-error">{error}</p>}
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
           <button className="btn-primary" disabled={busy || !draft.label.trim() || !draft.content.trim()}>

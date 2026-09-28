@@ -114,7 +114,7 @@ def test_pin_lockout_after_max_attempts(client, registered):
 
 
 def test_card_crud(client, registered):
-    new = {"label": "API keys", "category": "code", "color": "mint", "content": "sk-demo-123"}
+    new = {"label": "API keys", "category": "code", "color": "copper", "content": "sk-demo-123"}
     assert client.post("/api/v1/wallet/cards", json=new).status_code == 401  # locked
     client.post("/api/v1/wallet/unlock", json={"pin": registered["pin"]})
     r = client.post("/api/v1/wallet/cards", json=new)
@@ -192,6 +192,7 @@ def test_execute_with_card_stores_metadata_only(client, registered, fake_gemini)
     chat = body["chat"]
     assert chat["title"] == "Doctor prep" and chat["card_label"] == "Health Notes"
     assert chat["prompt_tokens"] == 12 and "medical" in chat["tags"]
+    assert chat["message_count"] == 2
     assert "prompt" not in chat and "output" not in chat
 
 
@@ -256,3 +257,31 @@ def test_delete_account(client, registered):
     with SessionLocal() as db:
         assert db.scalar(select(User).where(User.email == registered["email"])) is None
         assert db.scalar(select(WalletCard).join(User, isouter=True).where(User.id.is_(None))) is None
+
+
+def test_execute_continues_session_and_counts_messages(client, registered, fake_gemini):
+    first = client.post("/api/v1/llm/execute", json={"prompt": "Plan a trip to Lisbon", "title": "Lisbon"}).json()["chat"]
+    assert first["message_count"] == 2
+    history = [{"role": "user", "text": "Plan a trip to Lisbon"}, {"role": "model", "text": "Hello from Gemini"}]
+    r = client.post(
+        "/api/v1/llm/execute",
+        json={"prompt": "Add a day trip", "chat_id": first["id"], "history": history},
+    )
+    assert r.status_code == 200, r.text
+    chat = r.json()["chat"]
+    assert chat["id"] == first["id"] and chat["message_count"] == 4 and chat["title"] == "Lisbon"
+    # Transcript is forwarded upstream in order (user, model, user)...
+    import json as _json
+    sent = _json.loads(fake_gemini["body"])["contents"]
+    assert [c["role"] for c in sent] == ["user", "model", "user"]
+    # ...and the continued session moves to the front of the archive.
+    assert client.get("/api/v1/chats").json()["chats"][0]["id"] == first["id"]
+
+
+def test_execute_continue_errors(client, registered, fake_gemini):
+    sample = client.get("/api/v1/chats").json()["chats"][0]
+    assert sample["is_sample"] and sample["message_count"] > 2
+    assert client.post("/api/v1/llm/execute", json={"prompt": "hi", "chat_id": sample["id"]}).status_code == 400
+    assert client.post("/api/v1/llm/execute", json={"prompt": "hi", "chat_id": 999999}).status_code == 404
+    bad_role = {"prompt": "hi", "history": [{"role": "system", "text": "x"}]}
+    assert client.post("/api/v1/llm/execute", json=bad_role).status_code == 400
