@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  background: #0b0806;
+}
+html,
+body {
+  min-height: 100%;
+  color: #fff4eb;
+  -webkit-font-smoothing: antialiased;
+}
+/* body stays transparent so the fixed .page-bg layer shows through */
+body {
+  background: transparent;
+}
+
+/* ---------- Ambient page backdrop: orange field + blurred dark figure ---------- */
+.page-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  background: linear-gradient(160deg, #f0922f 0%, #e07420 35%, #b9500f 70%, #5a2206 100%);
+}
+.page-bg > span {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+}
+
+@layer components {
+  /* ---------- Liquid glass (Apple-style) ----------
+     A smoky, heavily blurred pane with a bright specular rim on the top-left,
+     a softer rim bottom-right, and an inner sheen. Pseudo-elements sit at
+     z-index -1 inside an isolated stacking context so content stays on top. */
+  .liquid-glass {
+    position: relative;
+    isolation: isolate;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.03) 55%),
+      rgba(30, 14, 6, 0.34);
+    -webkit-backdrop-filter: blur(28px) saturate(165%);
+    backdrop-filter: blur(28px) saturate(165%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.42),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 0 28px rgba(255, 236, 220, 0.06),
+      0 30px 60px -24px rgba(30, 8, 0, 0.55);
+  }
+  .liquid-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.75) 0%,
+      rgba(255, 255, 255, 0.12) 28%,
+      rgba(255, 255, 255, 0) 55%,
+      rgba(255, 255, 255, 0.28) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .liquid-glass::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: radial-gradient(120% 70% at 15% 0%, rgba(255, 255, 255, 0.16), transparent 55%);
+    pointer-events: none;
+  }
+  /* Darker, smokier variant (the "Search or Ask" bar) */
+  .liquid-glass-deep {
+    background:
+      linear-gradient(180deg, rgba(8, 4, 2, 0.72) 0%, rgba(40, 20, 10, 0.42) 100%),
+      rgba(20, 10, 4, 0.3);
+  }
+
+  /* ---------- Energy card (orange -> deep red gradient) ---------- */
+  .energy-card {
+    background:
+      radial-gradient(90% 60% at 0% 0%, rgba(255, 150, 80, 0.45), transparent 60%),
+      linear-gradient(150deg, #5c1606 0%, #9a2e0b 40%, #cf5518 78%, #ea7a2b 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      inset 0 -12px 30px rgba(40, 6, 0, 0.35),
+      0 30px 60px -18px rgba(40, 8, 0, 0.7);
+  }
+
+  .leather {
+    background:
+      radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 60%),
+      linear-gradient(180deg, #1d1612 0%, #120d0a 100%);
+  }
+
+  .input {
+    @apply w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-[15px] text-white
+           placeholder:text-white/35 outline-none transition
+           focus:border-ember-300/60 focus:bg-black/25 focus:ring-4 focus:ring-ember-400/15;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-ember-500 px-5 py-3 text-sm font-semibold
+           text-white shadow-[inset_0_1px_0_rgba(255,255,255,.35),0_10px_24px_-10px_rgba(120,30,0,.9)] transition
+           hover:bg-ember-400 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-45;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-2.5
+           text-sm font-medium text-white/85 transition hover:bg-white/[0.12] hover:text-white disabled:opacity-50;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-ember-900 px-5 py-3 text-sm font-semibold
+           text-ember-100 ring-1 ring-ember-400/40 transition hover:bg-ember-800 disabled:opacity-45;
+  }
+
+  /* Feedback without leaving the palette */
+  .note-error {
+    @apply rounded-xl border border-ember-400/40 bg-ink-950/60 px-4 py-2.5 text-sm text-ember-200;
+  }
+  .note-ok {
+    @apply rounded-xl bg-white/10 px-4 py-2.5 text-sm text-white;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
