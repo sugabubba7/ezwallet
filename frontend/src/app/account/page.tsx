@@ -9,7 +9,7 @@ import { PinInput } from "@/components/PinInput";
 import { TopBar } from "@/components/TopBar";
 import { api, errMsg } from "@/lib/api";
 import { useRequireAuth } from "@/lib/auth";
-import type { User } from "@/lib/types";
+import { displayName, type User } from "@/lib/types";
 
 type Status = { kind: "ok" | "err"; msg: string } | null;
 
@@ -94,7 +94,8 @@ export default function AccountPage() {
     );
   }
   const needsPw = user.has_password;
-  const emailMatches = delEmail.trim().toLowerCase() === user.email.toLowerCase();
+  const confirmAs = displayName(user);
+  const emailMatches = [user.email, user.username].some((v) => v && delEmail.trim().toLowerCase() === v.toLowerCase());
 
   return (
     <div className="min-h-screen overflow-x-hidden">
@@ -108,9 +109,10 @@ export default function AccountPage() {
         {/* Identity summary */}
         <section className="energy-card rounded-[32px]">
           <div className="flex flex-wrap items-center gap-4 p-6">
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-white text-lg font-bold uppercase text-ink-950">{user.email[0]}</span>
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-white text-lg font-bold uppercase text-ink-950">{displayName(user)[0]}</span>
             <div className="min-w-0 flex-1">
-              <div className="truncate font-semibold text-white">{user.email}</div>
+              <div className="truncate font-semibold text-white">{displayName(user)}</div>
+              {user.username && user.email && <div className="truncate text-xs text-white/70">{user.email}</div>}
               <div className="text-xs text-white/65">Member since {new Date(user.created_at).toLocaleDateString()}</div>
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
@@ -140,7 +142,7 @@ export default function AccountPage() {
           >
             <div className={needsPw ? "" : "sm:col-span-2"}>
               <Label htmlFor="new-email">New email</Label>
-              <input id="new-email" type="email" className="input" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder={user.email} required />
+              <input id="new-email" type="email" className="input" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder={user.email ?? "you@example.com"} required />
             </div>
             {needsPw && (
               <div>
@@ -258,7 +260,7 @@ export default function AccountPage() {
           onSubmit={async (e) => {
             e.preventDefault();
             const ok = await del.run(async () => {
-              if (!emailMatches) throw new Error(`Type ${user.email} exactly to confirm`);
+              if (!emailMatches) throw new Error(`Type ${confirmAs} exactly to confirm`);
               if (needsPw && !delPw) throw new Error("Enter your current password");
               const r = await api<{ message: string }>("/account", { method: "DELETE", body: { confirm_email: delEmail.trim(), current_password: needsPw ? delPw : null } });
               return r.message;
@@ -268,13 +270,13 @@ export default function AccountPage() {
           }}
         >
           <p className="text-sm text-white/60">
-            This cannot be undone. Type <strong className="text-white">{user.email}</strong> to confirm.
+            This cannot be undone. Type <strong className="text-white">{confirmAs}</strong> to confirm.
           </p>
           <div>
-            <input className="input" value={delEmail} onChange={(e) => { setDelEmail(e.target.value); del.clear(); }} placeholder={user.email} aria-label="Confirm email" autoComplete="off" spellCheck={false} />
+            <input className="input" value={delEmail} onChange={(e) => { setDelEmail(e.target.value); del.clear(); }} placeholder={confirmAs} aria-label="Confirm email" autoComplete="off" spellCheck={false} />
             {delEmail && (
               <p className={`mt-1.5 text-xs ${emailMatches ? "text-white/70" : "text-ember-200"}`}>
-                {emailMatches ? "✓ Email matches" : "Doesn't match your account email yet"}
+                {emailMatches ? "✓ Matches" : "Doesn't match yet"}
               </p>
             )}
           </div>

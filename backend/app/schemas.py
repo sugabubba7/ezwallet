@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 CATEGORIES = ("personal", "medical", "work", "finance", "travel", "code", "other")
 COLORS = ("ember", "amber", "cream", "copper", "rust", "noir")
@@ -11,6 +11,7 @@ Category = Literal["personal", "medical", "work", "finance", "travel", "code", "
 Color = Literal["ember", "amber", "cream", "copper", "rust", "noir"]
 
 _PIN_RE = re.compile(r"^\d{4}$")
+_USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{3,32}$")
 
 
 def _check_password(v: str) -> str:
@@ -27,26 +28,72 @@ def _check_pin(v: str) -> str:
     return v
 
 
+def _check_username(v: str) -> str:
+    v = v.strip()
+    if not _USERNAME_RE.match(v):
+        raise ValueError("Username must be 3-32 characters: letters, numbers, dot, dash or underscore")
+    if "@" in v:
+        raise ValueError("Username cannot contain @")
+    return v
+
+
+def _blank_to_none(v: object) -> object:
+    return v.strip() or None if isinstance(v, str) else v
+
+
 # ---------- Auth ----------
 class RegisterRequest(BaseModel):
-    email: EmailStr
+    """Email and/or username + password. The 4-digit vault PIN is optional
+    here (the web form asks for it; API clients can set it later)."""
+
+    email: EmailStr | None = None
+    username: str | None = None
     password: str = Field(max_length=128)
-    pin: str
+    pin: str | None = None
+
+    strip_blanks = field_validator("email", "username", "pin", mode="before")(_blank_to_none)
 
     @field_validator("password")
     @classmethod
     def _pw(cls, v: str) -> str:
         return _check_password(v)
 
+    @field_validator("username")
+    @classmethod
+    def _user(cls, v: str | None) -> str | None:
+        return _check_username(v) if v is not None else None
+
     @field_validator("pin")
     @classmethod
-    def _pin(cls, v: str) -> str:
-        return _check_pin(v)
+    def _pin(cls, v: str | None) -> str | None:
+        return _check_pin(v) if v is not None else None
+
+    @model_validator(mode="after")
+    def _need_identity(self) -> "RegisterRequest":
+        if not self.email and not self.username:
+            raise ValueError("Provide an email or a username")
+        return self
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    """Log in with an email or a username. Any of the three keys works."""
+
+    email: str | None = None
+    username: str | None = None
+    identifier: str | None = None
     password: str = Field(min_length=1, max_length=128)
+
+    strip_blanks = field_validator("email", "username", "identifier", mode="before")(_blank_to_none)
+
+    @model_validator(mode="after")
+    def _need_identity(self) -> "LoginRequest":
+        if not (self.identifier or self.email or self.username):
+            raise ValueError("Provide an email or a username")
+        return self
+
+    @property
+    def login_id(self) -> str:
+        return (self.identifier or self.email or self.username or "").strip()
 
 
 class GoogleAuthRequest(BaseModel):
@@ -57,7 +104,8 @@ class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    email: EmailStr
+    email: EmailStr | None
+    username: str | None
     has_password: bool
     has_pin: bool
     google_linked: bool
@@ -66,9 +114,41 @@ class UserOut(BaseModel):
 
 
 class AuthResponse(BaseModel):
+    """`token` and `access_token` carry the same JWT (two common spellings)."""
+
     user: UserOut
+    token: str
     access_token: str
     token_type: str = "bearer"
+
+
+class UserUpdate(BaseModel):
+    """PATCH /api/users/:id. Send only the fields you want to change."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr | None = None
+    username: str | None = None
+    password: str | None = Field(default=None, max_length=128)
+    current_password: str | None = None
+
+    strip_blanks = field_validator("email", "username", mode="before")(_blank_to_none)
+
+    @field_validator("password")
+    @classmethod
+    def _pw(cls, v: str | None) -> str | None:
+        return _check_password(v) if v is not None else None
+
+    @field_validator("username")
+    @classmethod
+    def _user(cls, v: str | None) -> str | None:
+        return _check_username(v) if v is not None else None
+
+    @model_validator(mode="after")
+    def _something(self) -> "UserUpdate":
+        if self.email is None and self.username is None and self.password is None:
+            raise ValueError("Nothing to update: send email, username and/or password")
+        return self
 
 
 class MessageResponse(BaseModel):
@@ -103,7 +183,8 @@ class ChangePinRequest(BaseModel):
 
 class DeleteAccountRequest(BaseModel):
     current_password: str | None = None
-    confirm_email: EmailStr
+    # The account's email or username, typed again to confirm.
+    confirm_email: str = Field(min_length=1, max_length=320)
 
     @field_validator("confirm_email", mode="before")
     @classmethod

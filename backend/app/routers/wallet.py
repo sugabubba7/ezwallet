@@ -31,10 +31,17 @@ def _user_cards(db: Session, user: User) -> list[WalletCard]:
     )
 
 
+UNREADABLE = "⚠ This card was encrypted with a different key and can't be read on this server."
+
+
 def _reveal(card: WalletCard) -> CardRevealed:
+    try:
+        content = decrypt_text(card.content_encrypted)
+    except ValueError:  # key rotated / DB shared between machines: degrade, don't 500
+        content = UNREADABLE
     return CardRevealed(
         id=card.id, label=card.label, category=card.category, color=card.color,
-        position=card.position, created_at=card.created_at, content=decrypt_text(card.content_encrypted),
+        position=card.position, created_at=card.created_at, content=content,
     )
 
 

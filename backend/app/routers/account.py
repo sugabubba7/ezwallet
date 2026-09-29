@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..accounts import ensure_available
 from ..database import get_db
 from ..deps import clear_auth_cookies, get_current_user, set_session_cookie, to_user_out
 from ..models import User
@@ -43,8 +43,7 @@ def change_email(
     new_email = body.new_email.lower()
     if new_email == user.email:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "That is already your email")
-    if db.scalar(select(User).where(User.email == new_email)):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "An account with this email already exists")
+    ensure_available(db, email=new_email, exclude=user)
     user.email = new_email
     db.commit()
     return to_user_out(user)
@@ -88,8 +87,9 @@ def delete_account(
     db: Session = Depends(get_db),
 ) -> MessageResponse:
     _require_password(user, body.current_password)
-    if body.confirm_email.lower() != user.email:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Confirmation email does not match your account")
+    typed = body.confirm_email.lower()
+    if typed not in {v.lower() for v in (user.email, user.username) if v}:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Confirmation does not match your account email or username")
     db.delete(user)  # cascades to wallet cards and chat summaries
     db.commit()
     clear_auth_cookies(response)

@@ -49,7 +49,10 @@ def execute(
         if not vault_is_unlocked(request, user):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Vault is locked. Enter your PIN to use a context card.")
         card_label, card_category = card.label, card.category
-        context = decrypt_text(card.content_encrypted)
+        try:
+            context = decrypt_text(card.content_encrypted)
+        except ValueError:
+            raise HTTPException(status.HTTP_409_CONFLICT, "This card can't be decrypted with the current key") from None
 
     history = [(t.role, t.text) for t in body.history]
     contents = gemini.build_contents(body.prompt, context, card_label, history)

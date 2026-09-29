@@ -4,7 +4,7 @@ import { Cpu, LayoutGrid, LogOut, UserCog } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import type { LlmStatus } from "@/lib/types";
+import { displayName, type LlmStatus } from "@/lib/types";
 import { GoogleG } from "./GoogleButton";
 import { Logo } from "./Logo";
 
@@ -62,11 +62,11 @@ export function TopBar({ llm }: { llm?: LlmStatus | null }) {
               <img src={user.google_picture} alt="" className="h-6 w-6 rounded-full" referrerPolicy="no-referrer" />
             ) : (
               <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-[11px] font-bold uppercase text-ink-950">
-                {user.email[0]}
+                {displayName(user)[0]}
               </span>
             )}
             <span className="max-w-[120px] truncate text-sm text-white sm:max-w-[180px]" data-testid="user-email">
-              {user.email}
+              {displayName(user)}
             </span>
           </div>
           <button

@@ -27,9 +27,9 @@ def test_password_and_pin_are_argon2id_hashed(registered):
         assert registered["password"] not in u.password_hash
 
 
-def test_register_duplicate_email_400(client, registered):
+def test_register_duplicate_email_409(client, registered):
     r = client.post("/api/v1/auth/register", json=registered)
-    assert r.status_code == 400
+    assert r.status_code == 409
 
 
 @pytest.mark.parametrize(

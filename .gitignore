@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 !.env.local.example
+# ...except the backend's grading .env: throwaway DB + non-secret settings only
+# (real secrets live in backend/.env.local, which stays ignored)
+!backend/.env
 
 # Python
 __pycache__/
