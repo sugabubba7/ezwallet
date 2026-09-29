@@ -112,7 +112,7 @@ To look at the production data, open the Neon console → **Tables** or **SQL Ed
 | "The server is waking up (free hosting)…" | Normal after the service has been idle. Wait a few seconds and retry |
 | Vercel build fails with `BACKEND_URL is not set` | Add it under Settings → Environment Variables, then redeploy |
 | Every API call fails with 404 / "Not Found" | `BACKEND_URL` has a typo or ends in `/api`. It must be just the Render origin |
-| Render deploy fails with `Field required … jwt_secret / wallet_encryption_key` | An env var is missing on Render |
+| Render logs show `Missing JWT_SECRET, WALLET_ENCRYPTION_KEY` | An env var is missing on Render. Set both in Render → Environment (don't rely on first-run generation there: Render's disk is wiped on every deploy) |
 | Render logs show `Fernet key must be 32 url-safe base64-encoded bytes` | `WALLET_ENCRYPTION_KEY` was pasted incompletely. Regenerate it with Step 2 |
 | Render logs show a `connection … SSL` / `password authentication failed` error | Re-copy the Neon string. It must include `?sslmode=require`, and use the direct (not pooled) host |
 | Logged in, but get bounced back to /login | Make sure you're using the Vercel URL, not the Render URL. The cookie belongs to the Vercel domain |

@@ -1,278 +1,208 @@
-# EZ Wallet: LLM Data Wallet
+# EZ Wallet
 
-A full-stack **LLM Data Wallet**. You keep sensitive context (a writing voice, a project brief, health notes, and so on) in an **encrypted, PIN-locked card vault**. When a prompt needs a card, you attach it and the prompt goes through a **zero-data-retention (ZDR) proxy to Google Gemini**. Past sessions appear in a cover-flow archive that stores **metadata only**: when each chat happened and how many texts were exchanged, never what was said.
+**EZ Wallet is a personal "data wallet" for AI chats.** You keep sensitive context (your writing style, project notes, health info) in a PIN-locked, encrypted vault of cards, attach a card only when a prompt needs it, and send it to Google Gemini through a proxy that stores no prompts or replies.
 
-| Layer | Stack |
-|---|---|
-| Frontend | Next.js 15 (App Router) · TypeScript · Tailwind CSS · Framer Motion · Lucide React · one typeface (Inter), an orange + black palette, liquid-glass surfaces |
-| Backend | FastAPI · SQLAlchemy 2 · Alembic · SQLite (`wallet.db`) locally, PostgreSQL (Neon) in production |
-| Hosting | Vercel (frontend) · Render (API) · Neon (PostgreSQL), all free tier. See **[DEPLOY.md](DEPLOY.md)** |
-| Security | argon2id (passlib) · PyJWT in HTTP-only cookies · Fernet (AES-128-CBC + HMAC-SHA256) at rest · Google Identity Services |
-| LLM | Gemini REST API (`generativelanguage.googleapis.com`), `gemini-2.5-flash` by default |
-
-![Dashboard](docs/screenshots/llm-execute.png)
+It's a FastAPI backend with a Next.js frontend, using PostgreSQL (Neon) or SQLite.
 
 ---
 
-> **Tech stack & grading map:** see [TECH_STACK_AND_GRADING.md](TECH_STACK_AND_GRADING.md).
->
-> **Live deployment:** follow **[DEPLOY.md](DEPLOY.md)** to put this on the web for free (Vercel + Render + Neon) in about 20 minutes.
+## 1. Prerequisites
 
-## 1. Quick start
+| Tool | Version | Check with |
+|---|---|---|
+| **Python** | **3.11 or newer** (tested on 3.11, 3.12, 3.13) | `python3 --version` |
+| **Node.js** | **20 or newer** (comes with npm) | `node --version` |
+| **git** | any | `git --version` |
 
-**Prerequisites:** Python 3.11+ and Node.js 20+.
+You don't need Docker, a database server, or any API keys. Ports **8000** (backend) and **3000** (frontend) must be free.
 
-### Backend (FastAPI on :8000)
+---
 
+## 2. Run it
+
+Use **two terminals**. Start the **backend first**.
+
+### Terminal 1: backend (http://localhost:8000)
+
+**macOS / Linux**
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-pip install -r requirements-dev.txt
-python scripts/init_env.py           # creates .env with fresh JWT_SECRET + WALLET_ENCRYPTION_KEY
-# optional: edit .env to add GEMINI_API_KEY and GOOGLE_CLIENT_ID
-uvicorn app.main:app --reload --port 8000
+git clone https://github.com/sugabubba7/ezwallet.git
+cd ezwallet/backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --port 8000
 ```
 
-Database migrations run **automatically on startup**. API docs are at http://localhost:8000/docs.
+**Windows (PowerShell)**
+```powershell
+git clone https://github.com/sugabubba7/ezwallet.git
+cd ezwallet\backend
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --port 8000
+```
 
-### Frontend (Next.js on :3000)
+Wait for `Application startup complete.`, then check it from any other terminal:
+```bash
+curl http://localhost:8000/healthz
+```
+It should return `{"status":"ok"}`.
+
+### Terminal 2: frontend (http://localhost:3000)
 
 ```bash
-cd frontend
-cp .env.local.example .env.local     # optional: add NEXT_PUBLIC_GOOGLE_CLIENT_ID
+cd ezwallet/frontend
 npm install
 npm run dev
 ```
 
-Open **http://localhost:3000**. It redirects to `/login`. Choose "Create a wallet" to register.
+Open **http://localhost:3000**. Register a new account, or log in with the grading account:
 
-> The browser only talks to `localhost:3000`. Next.js proxies `/api/*` to FastAPI (see `frontend/next.config.mjs`), so the session cookie is first-party and HTTP-only, and CORS never comes into play.
+| Username | Password | Vault PIN |
+|---|---|---|
+| `NYUgrader` | `Courant2026!` | `2026` |
 
-### Run the tests
+On the login screen, type the username into the "Email or username" box. The PIN unlocks the wallet cards on the dashboard (click the orange eye).
 
+---
+
+## 3. Environment
+
+| File | In git? | What's in it |
+|---|---|---|
+| `backend/.env` | ✅ **committed on purpose** | The **working config for grading**: the throwaway database made for this assignment, the course's grading login, and non-secret settings. Nothing in it protects anything real |
+| `backend/.env.example` | ✅ | **Every** variable the backend reads, with an explanation of each |
+| `backend/.env.local` | ❌ git-ignored | **Created automatically on first run.** Holds the two real secrets (`JWT_SECRET`, `WALLET_ENCRYPTION_KEY`), plus any personal keys you add (Gemini, Google) |
+| `frontend/.env.local.example` | ✅ | Optional frontend settings. The frontend needs **no** env file to run locally |
+
+**Which secrets matter, and why they're handled differently:**
+- **Database URL:** a throwaway database created only for this assignment, so it's committed as the brief asks.
+- **`JWT_SECRET` and `WALLET_ENCRYPTION_KEY`:** real secrets, so they are **never** committed. The backend generates them on first start and saves them to `backend/.env.local`, and later restarts reuse them. There's nothing to copy by hand.
+- **Personal API keys (Gemini, Google OAuth):** these are *my* accounts, so they aren't in the repo. The app runs fine without them:
+  - **Gemini:** without a key, the "Ask Gemini" box returns a clear 503 message. To enable it, add `GEMINI_API_KEY=...` to `backend/.env.local`.
+  - **Google sign-in:** the button shows "(not configured)". To enable it, add `GOOGLE_CLIENT_ID=...` to `backend/.env.local` and `NEXT_PUBLIC_GOOGLE_CLIENT_ID=...` to `frontend/.env.local`.
+
+Priority order: **real environment variables > `backend/.env.local` > `backend/.env`**.
+
+---
+
+## 4. Anything weird (read this if something fails)
+
+- **Start the backend before the frontend.** The frontend forwards every `/api/*` request to `http://127.0.0.1:8000`.
+- **Migrations run automatically** when the backend starts (Alembic `upgrade head`). There's no separate migrate command. You'll see `Running upgrade … -> 0003` the first time.
+- **Seeding is automatic, too.** On startup, the `NYUgrader` account is created if it doesn't exist. Every new account gets 3 sample wallet cards and 5 sample chat summaries, so the dashboard isn't empty.
+- **First start writes `backend/.env.local`.** Don't delete it: it holds the key that decrypts wallet cards.
+- **"Address already in use" / wrong app answering on port 8000:** check `curl http://localhost:8000/healthz`. If the reply isn't exactly `{"status":"ok"}`, another program owns the port. Find it with `lsof -i :8000` (macOS/Linux) and stop it.
+- **macOS zsh:** copy commands without trailing `# comments`. By default zsh passes them as arguments.
+- **Reset all local data** (only when using SQLite): stop the backend and delete `backend/wallet.db*`.
+
+---
+
+## 5. API
+
+JSON in, JSON out. Protected routes take `Authorization: Bearer <token>`. Every error has the shape `{"detail": "message"}`.
+
+### The assignment's endpoints
+
+| Method | Path | Auth | Request body | Success | Errors |
+|---|---|---|---|---|---|
+| GET | `/healthz` | no | none | **200** `{"status":"ok"}` | none |
+| POST | `/api/auth/register` | no | `{"email"?, "username"?, "password", "pin"?}` (email **or** username required) | **201** `{token, access_token, token_type, user}` | 400 invalid input · 409 email/username taken |
+| POST | `/api/auth/login` | no | `{"email" \| "username", "password"}` | **200** `{token, access_token, token_type, user}` | 400 · 401 wrong credentials |
+| GET | `/api/auth/me` | yes | none | **200** `user` | 401 |
+| GET | `/api/users/:id` | yes | none | **200** `user` | 401 · **404 not yours** |
+| PATCH | `/api/users/:id` | yes | any of `{"email", "username", "password", "current_password"}` | **200** `user` | 400 · 401 · **404 not yours** · 409 taken |
+| DELETE | `/api/users/:id` | yes | none | **200** `{"message": "User deleted"}` | 401 · **404 not yours** |
+
+The `user` object looks like this. It **never** includes a password or hash:
+```json
+{"id": 1, "email": "a@example.com", "username": null, "has_password": true,
+ "has_pin": false, "google_linked": false, "google_picture": null,
+ "created_at": "2026-09-29T12:00:00Z"}
+```
+
+### The three rules
+1. **No password hashes, ever.** Passwords are stored as argon2id hashes, and no response model has a field for them. Validation errors never echo input values. The test suite checks every response for hash or password text.
+2. **Missing, bad, or expired token → 401.** This covers no header, garbage, an expired token, a wrong signature, the wrong token type, and the token of a deleted user. If an `Authorization` header is sent, it's the only credential considered. A bad bearer token is a 401 even when a valid session cookie is also present.
+3. **Someone else's `:id` → 404**, the same for GET, PATCH and DELETE.
+   - **Why 404 and not 403:** a 403 means "that account exists, you just can't touch it", which lets anyone with a token probe which ids are real. A 404 answers the same way for "not yours", "doesn't exist" and "not even a number", so nothing leaks. OWASP recommends this to prevent account enumeration.
+   - **Order of checks:** ownership is checked **before** the request body is read, so a malformed PATCH aimed at another user's id is still a 404, never a 400 that would hint the id is real.
+
+### Try it with curl
 ```bash
-cd backend && pytest -q          # 32 tests: status codes, hashing, encryption, ZDR, ownership, sessions, migrations
-# same suite against PostgreSQL (what production uses):
-TEST_DATABASE_URL=postgresql://user@localhost:5432/ezw_test pytest -q
-cd frontend && npm run typecheck && npm run build
+curl -s -X POST localhost:8000/api/auth/register -H 'Content-Type: application/json' \
+  -d '{"email":"alice@example.com","password":"Password123"}'
+TOKEN=$(curl -s -X POST localhost:8000/api/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"alice@example.com","password":"Password123"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+curl -s localhost:8000/api/auth/me -H "Authorization: Bearer $TOKEN"
 ```
+Interactive docs for every endpoint are at **http://localhost:8000/docs**.
+
+### Web-app endpoints (used by the frontend)
+Everything under `/api/v1/…`:
+- `auth/*`: the same handlers as above, plus Google sign-in and logout.
+- `account/*`: change email, password or PIN, and delete the account (requires the current password).
+- `wallet/*`: encrypted cards and PIN unlock.
+- `chats`: metadata-only session history.
+- `llm/execute`: the Gemini zero-data-retention proxy.
 
 ---
 
-## 2. Walkthrough: test login and persistence
+## 6. Checks
 
-1. **Register** at `/register` with an email, a password (8+ characters, letters and numbers) and a **4-digit vault PIN**. New accounts get 3 starter cards and 5 sample chat summaries (turn this off with `SEED_DEMO_DATA=false`).
-2. **Dashboard.** The top bar shows your email, Google-link status and Gemini status.
-   - **Data Pocket (left):** the cards peek out of the leather pocket, blurred. Click the **orange eye** and enter your PIN, and the cards slide up out of the pocket.
-   - **Hover** a card to reveal its secret. Move the mouse away and it is masked again at once. On touch screens, tap to toggle.
-   - Tap the dashed **◯** on a card to attach it to your prompt (it turns into a ✓).
-   - **Chat Archive (right):** a 3D cover flow. Each card shows the date and time of the chat, with **how many texts were exchanged** as the subtext. The front card is opaque, and cards further back are progressively blurred and faded. Drag it, use the ◀◀ ▶ ▶▶ controls or the arrow keys, or click a side card.
-   - **Gemini ZDR Proxy (bottom):** a "Search or Ask" pill. Press Enter to send. Attach a context card from the list below it (or press ⌥1–⌥9). Keep replying to continue the same session, and its text count goes up. **New chat** starts over. The transcript lives only in the browser tab.
-3. **Account** (`/account`): change your email, password or vault PIN, or delete the account.
-4. **Check persistence:** stop uvicorn (Ctrl+C), start it again, and log in. Your cards, chat summaries and credentials are all still there, because they live in `backend/wallet.db`.
-
-```bash
-# Inspect the DB directly: card contents are ciphertext, hashes are argon2id
-sqlite3 backend/wallet.db "select email, substr(password_hash,1,30) from users;"
-sqlite3 backend/wallet.db "select label, substr(content_encrypted,1,20) from wallet_cards;"
-```
-
----
-
-## 3. Architecture
-
-```
-┌──────────── Browser (localhost:3000) ────────────┐
-│ /login /register /dashboard /account             │
-│ WalletContainer · CoverFlowSlider · LlmConsole   │
-└───────────────┬──────────────────────────────────┘
-                │ fetch('/api/v1/...')  (cookie: ezw_session, ezw_vault; HTTP-only)
-┌───────────────▼──────────────────────────────────┐
-│ Next.js server: rewrite /api/* → BACKEND_URL     │
-└───────────────┬──────────────────────────────────┘
-                │
-┌───────────────▼──────────── FastAPI (:8000) ─────┐
-│ routers/auth     register · login · google · me  │
-│ routers/account  email · password · pin · delete │
-│ routers/wallet   cards · unlock · lock · CRUD    │
-│ routers/chats    list · get · delete (metadata)  │
-│ routers/llm      status · execute ──────────────────► generativelanguage.googleapis.com
-│ security.py  argon2id · JWT · Fernet             │      (x-goog-api-key header)
-│ Alembic migrations run in lifespan()             │
-└───────────────┬──────────────────────────────────┘
-                │ SQLAlchemy
-          backend/wallet.db (SQLite, WAL mode, FK cascade) locally
-          Neon PostgreSQL (TLS, pooled + pre-ping) in production
-```
-
-### Repository layout
-
-```
-backend/
-  app/
-    main.py          app factory, lifespan migrations, 422→400 handler, security headers
-    config.py        pydantic-settings; secrets are required, with no defaults
-    database.py      engine, session, SQLite pragmas / Postgres pool settings
-    models.py        User, WalletCard, ChatSummary
-    schemas.py       request/response models and validation
-    security.py      argon2id, JWT, Fernet helpers
-    deps.py          current user, vault gate, cookie helpers
-    gemini.py        ZDR Gemini client
-    seed.py          optional starter content
-    routers/         auth, account, wallet, chats, llm
-  alembic/           env.py + versions/0001_initial_schema.py
-  scripts/init_env.py
-  tests/             pytest suite (isolated temp DB, mocked Gemini transport)
-frontend/
-  src/app/           login, register, dashboard, account pages
-  src/components/    WalletContainer, CoverFlowSlider, PinModal, CardEditorModal, LlmConsole, …
-  src/lib/           api client, auth context, types, card themes
-```
-
-### Data model
-
-| Table | Key columns |
-|---|---|
-| `users` | `email` (unique), `password_hash` (argon2id, nullable for Google-only), `pin_hash` (argon2id), `google_sub` (unique), `pin_failed_attempts`, `pin_locked_until`, `token_version` |
-| `wallet_cards` | `user_id` → users (CASCADE), `label`, `category`, `color`, **`content_encrypted`** (Fernet bytes), `position` |
-| `chat_summaries` | `user_id` → users (CASCADE), `title`, `model`, `tags` (JSON), `card_label`, `message_count`, `prompt_tokens`, `output_tokens`, `latency_ms`, `is_sample`, `created_at`, `updated_at` (last activity). **There are no prompt or output columns.** |
-
----
-
-## 4. REST API
-
-Base path is `/api/v1`. Every request and response body is JSON. Errors always look like `{"detail": "..."}`. Validation errors return **400** (FastAPI's default 422 is remapped) and also carry an `errors: [{field, message}]` array.
-
-| Method & path | Body | Success | Errors |
-|---|---|---|---|
-| `POST /auth/register` | `{email, password, pin}` | **201** `{user, access_token, token_type}` + cookie | 400 invalid or duplicate email |
-| `POST /auth/login` | `{email, password}` | **200** `{user, access_token, token_type}` + cookie | 400 invalid body, 401 bad credentials |
-| `POST /auth/google` | `{credential}` (GIS ID token) | **201** new account / **200** existing | 400 not configured, 401 invalid token |
-| `POST /auth/logout` | none | 200 `{message}` | |
-| `GET /auth/me` | none | 200 `UserOut` | 401 |
-| `GET /account` | none | 200 `UserOut` | 401 |
-| `PUT /account/email` | `{new_email, current_password}` | 200 `UserOut` | 400 taken or same, 401 wrong password |
-| `PUT /account/password` | `{current_password, new_password}` | 200 `{message}` (other sessions revoked) | 400 weak, 401 wrong password |
-| `PUT /account/pin` | `{current_password, new_pin}` | 200 `{message}` | 400, 401 |
-| `DELETE /account` | `{current_password, confirm_email}` | 200 `{message}` (cascade delete) | 400 email mismatch, 401 |
-| `GET /wallet/cards` | none | 200 `{cards: CardMeta[], locked}` (**never content**) | 401 |
-| `POST /wallet/unlock` | `{pin}` | 200 `{cards: CardRevealed[], expires_in_seconds}` + vault cookie | 400 no PIN set, 401 wrong PIN, 429 locked out |
-| `POST /wallet/lock` | none | 200 | 401 |
-| `GET /wallet/cards/revealed` | none | 200 `CardRevealed[]` | 401 vault locked |
-| `POST /wallet/cards` | `{label, category, color, content}` | **201** `CardRevealed` | 400, 401 |
-| `PUT /wallet/cards/{id}` | partial of the above | 200 `CardRevealed` | 400, 401, **404** |
-| `DELETE /wallet/cards/{id}` | none | 200 | 401, **404** |
-| `GET /chats` | none | 200 `{chats: Chat[]}` | 401 |
-| `GET /chats/{id}` | none | 200 `Chat` | 401, **404** |
-| `DELETE /chats/{id}` | none | 200 | 401, **404** |
-| `GET /llm/status` | none | 200 `{configured, model, endpoint}` | 401 |
-| `POST /llm/execute` | `{prompt, card_id?, chat_id?, history?: [{role:"user"\|"model", text}], title?, tags?}` | 200 `{output, model, chat, retention:"none"}`. With `chat_id` it continues that session and adds 2 to `message_count` | 400 (invalid, or a sample session), 401 (auth or vault locked), 404 card or chat, 502 upstream, 503 no key |
-
-Auth accepts **either** the HTTP-only `ezw_session` cookie (browser) **or** `Authorization: Bearer <access_token>` (curl, Postman). A resource that belongs to another user returns **404**, never 403, so IDs don't leak.
-
-```bash
-# curl example (bearer flow)
-TOKEN=$(curl -s -X POST localhost:8000/api/v1/auth/login -H 'content-type: application/json' \
-  -d '{"email":"you@example.com","password":"Sup3rSecret!"}' | python -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
-curl -s localhost:8000/api/v1/wallet/cards -H "Authorization: Bearer $TOKEN"
-```
-
----
-
-## 5. Environment variables
-
-**No secret is hardcoded.** The backend refuses to start if `JWT_SECRET` or `WALLET_ENCRYPTION_KEY` is missing. Both `.env` files are git-ignored. Only the `*.example` templates are committed.
-
-### `backend/.env`
-
-| Variable | Required | Default | Purpose |
-|---|---|---|---|
-| `JWT_SECRET` | **yes** | none | HMAC key for session and vault JWTs (32+ characters) |
-| `WALLET_ENCRYPTION_KEY` | **yes** | none | Fernet key that encrypts card contents |
-| `DATABASE_URL` | no | `sqlite:///./wallet.db` | SQLAlchemy URL. Production uses PostgreSQL: a `postgres://` or `postgresql://` URL (as Neon gives it) is converted to the bundled `psycopg` driver automatically |
-| `GEMINI_API_KEY` | no | none | From https://aistudio.google.com/apikey. Without it, execute returns 503 |
-| `GEMINI_MODEL` | no | `gemini-2.5-flash` | Any `generateContent` model |
-| `GEMINI_API_BASE` | no | `https://generativelanguage.googleapis.com/v1beta` | Override for testing |
-| `GOOGLE_CLIENT_ID` | no | none | OAuth Web Client ID. Leave blank to disable Google sign-in |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | no | `720` | Session lifetime |
-| `VAULT_SESSION_MINUTES` | no | `5` | How long a PIN unlock lasts |
-| `PIN_MAX_ATTEMPTS` / `PIN_LOCKOUT_MINUTES` | no | `5` / `5` | PIN brute-force throttle |
-| `COOKIE_SECURE` | no | `false` | Set `true` behind HTTPS |
-| `CORS_ORIGINS` | no | `http://localhost:3000` | For direct (non-proxied) API callers |
-| `SEED_DEMO_DATA` | no | `true` | Starter cards and sample summaries for new accounts |
-
-Generate the secrets by hand if you prefer:
-
-```bash
-python -c "import secrets; print(secrets.token_urlsafe(48))"                              # JWT_SECRET
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" # WALLET_ENCRYPTION_KEY
-```
-
-### `frontend/.env.local`
-
-| Variable | Purpose |
-|---|---|
-| `BACKEND_URL` | Where Next.js proxies `/api/*` (server-side only). Default `http://127.0.0.1:8000` |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | The same Client ID as the backend. It is public by design (Google embeds it in the page), so it is not a secret |
-
-### Enabling Google sign-in
-
-1. Go to Google Cloud Console → APIs & Services → Credentials → **Create OAuth client ID** → *Web application*.
-2. Under **Authorized JavaScript origins**, add `http://localhost:3000` and `http://localhost`.
-3. Put the Client ID in `backend/.env` (`GOOGLE_CLIENT_ID`) **and** `frontend/.env.local` (`NEXT_PUBLIC_GOOGLE_CLIENT_ID`), then restart both servers.
-
-The browser receives a Google ID token. The backend verifies its signature, audience and expiry (`google.oauth2.id_token.verify_oauth2_token`) and requires `email_verified`, then issues our own session. A Google account whose email matches an existing account is linked to it. Google-only users are asked to set a vault PIN on the dashboard.
-
----
-
-## 6. Database migrations
-
-Alembic manages the schema, and `app/main.py` runs `alembic upgrade head` inside the FastAPI lifespan, **so a plain `uvicorn` start always leaves the DB current.** `alembic/env.py` reads `DATABASE_URL` from settings, so no connection string lives in `alembic.ini`. `render_as_batch=True` keeps `ALTER TABLE` migrations working on SQLite. Both revisions have been run up, down and up again against PostgreSQL 16.
-
-| Revision | Change |
-|---|---|
-| `0001` | Initial schema: users, wallet_cards, chat_summaries |
-| `0002` | Adds `chat_summaries.message_count` and `updated_at` (backfilled from `created_at`), and maps the old card skins to the orange/black palette (`sapphire→ember`, `peach→amber`, `ivory→cream`, `mint→copper`, `lilac→rust`, `graphite→noir`). Reversible |
-
+**Automated tests** (46 tests: every endpoint, all three rules, and a simulation of the grading script with two accounts):
 ```bash
 cd backend
-alembic upgrade head                                   # apply by hand (same as on startup)
-alembic current                                        # show the applied revision
-alembic revision --autogenerate -m "add column foo"    # after editing app/models.py
-alembic downgrade -1                                   # roll back one revision
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+pytest -q
 ```
 
-To reset local data, stop the server, run `rm backend/wallet.db*`, and start it again.
+**Data survives a restart:** register, stop the backend (Ctrl+C), start it again with the same `uvicorn` command, and log in. Your account, cards and chat history are still there, because they live in the database, not in memory.
+
+**Passwords:** hashed with **argon2id** in `backend/app/security.py` (`CryptContext(schemes=["argon2"], argon2__type="ID")`). Stored hashes start with `$argon2id$`.
 
 ---
 
-## 7. Security summary
+## 7. How it's built
 
-See [JOURNAL.md](JOURNAL.md) for the reasoning behind each layer.
-
-- **Passwords and PINs:** argon2id through passlib, with a timing equaliser for unknown emails.
-- **Sessions:** HS256 JWTs in `HttpOnly; SameSite=Lax` cookies. `token_version` revokes all sessions when the password changes.
-- **Vault:** a second short-lived JWT (5 minutes) that is only issued after the PIN is verified. There are 5 attempts before a 5-minute lockout (429 + `Retry-After`).
-- **At rest:** card content is encrypted with Fernet. The locked card list never includes content, and the browser drops decrypted text when the vault locks.
-- **Hover reveal:** unless a card is hovered, the DOM holds a fixed-length mask rather than the secret, so the text can't be selected, copied or read from the DOM, and its length isn't leaked.
-- **ZDR proxy:** nothing is logged or persisted except metadata. Multi-turn sessions work by having the browser re-send the transcript it holds in memory; the server forwards it and stores only the running message count. `Cache-Control: no-store` is set. The API key travels in a header, never the URL, and buffers are scrubbed after each call.
-- **Hardening:** 404 for other users' resources, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, and cascade deletes on account removal.
-
-### Zero data retention: what is and isn't guaranteed
-
-This app never writes prompts, context or outputs to disk, logs or the DB, and it clears its in-process buffers after each call. Python strings are immutable, so the memory scrub is best effort. **Retention on Google's side is set by your Google Cloud / AI Studio project, not by this code.** For contractual ZDR, use a paid-tier project where Google does not use data to improve its products, or Vertex AI with zero data retention enabled. Swap `GEMINI_API_BASE` to point elsewhere.
-
----
-
-## 8. Screenshots
-
-| Login | Register |
+| Layer | Tech |
 |---|---|
-| ![](docs/screenshots/login.png) | ![](docs/screenshots/register.png) |
-| **Dashboard (locked)** | **Hover reveal** |
-| ![](docs/screenshots/dashboard-locked.png) | ![](docs/screenshots/hover-reveal.png) |
-| **Chat archive (date, time, texts exchanged)** | **Multi-turn session + context cards** |
-| ![](docs/screenshots/coverflow.png) | ![](docs/screenshots/llm-execute.png) |
-| **Account** | |
-| ![](docs/screenshots/account.png) | |
+| Frontend | Next.js 15 (React 19, TypeScript), Tailwind CSS, Framer Motion |
+| Backend | Python, FastAPI, SQLAlchemy 2, Alembic migrations |
+| Database | PostgreSQL on Neon (production and grading), SQLite for fully offline use |
+| Auth | Own implementation: argon2id hashing, JWT bearer tokens (plus an HttpOnly cookie for the browser), optional Google sign-in |
+| Extras | Fernet-encrypted wallet cards, PIN-gated vault, Gemini proxy that stores metadata only |
+
+```
+Browser ──► Next.js :3000 ──(/api/* forwarded)──► FastAPI :8000 ──► PostgreSQL / SQLite
+                                                         └──► Gemini API (optional)
+```
+
+The frontend forwards `/api/*` to the backend server-side, so the browser only ever talks to one origin. Login cookies stay first-party, and there are no CORS preflights in normal use. The backend also has CORS configured for direct browser clients (`CORS_ORIGINS`).
+
+More detail:
+- [TECH_STACK_AND_GRADING.md](TECH_STACK_AND_GRADING.md): how each rubric item is met
+- [JOURNAL.md](JOURNAL.md): the journal report
+- [DEPLOY.md](DEPLOY.md): optional free hosting on Vercel, Render and Neon
+- [docs/EZ_Wallet_Explained.docx](docs/EZ_Wallet_Explained.docx): the whole project explained in plain English
+
+### Repository layout
+```
+backend/
+  app/main.py            app setup, /healthz, router mounting, startup migrations
+  app/routers/auth.py    register, login, me (mounted at /api/auth and /api/v1/auth)
+  app/routers/users.py   GET/PATCH/DELETE /api/users/:id (Rule 3 lives here)
+  app/deps.py            token checking (Rule 2)
+  app/security.py        argon2id, JWT, Fernet encryption
+  app/config.py          settings loading + first-run secret generation
+  alembic/versions/      database migrations 0001–0003
+  tests/                 pytest suite (test_rubric.py mirrors the grading script)
+  .env                   committed grading config (throwaway DB only)
+  .env.example           every variable, documented
+frontend/
+  src/app/               pages: login, register, dashboard, account
+  src/components/        wallet, carousel, console, modals
+```
