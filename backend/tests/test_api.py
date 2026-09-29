@@ -285,3 +285,12 @@ def test_execute_continue_errors(client, registered, fake_gemini):
     assert client.post("/api/v1/llm/execute", json={"prompt": "hi", "chat_id": 999999}).status_code == 404
     bad_role = {"prompt": "hi", "history": [{"role": "system", "text": "x"}]}
     assert client.post("/api/v1/llm/execute", json=bad_role).status_code == 400
+
+
+def test_delete_account_tolerates_whitespace_in_confirmation(client, registered):
+    r = client.request(
+        "DELETE", "/api/v1/account",
+        json={"current_password": registered["password"], "confirm_email": f"  {registered['email'].upper()} "},
+    )
+    assert r.status_code == 200, r.text
+    assert client.get("/api/v1/auth/me").status_code == 401
