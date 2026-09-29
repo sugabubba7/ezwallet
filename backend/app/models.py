@@ -14,7 +14,9 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    # Either may be empty, but never both (enforced at registration).
+    email: Mapped[str | None] = mapped_column(String(320), unique=True, index=True)
+    username: Mapped[str | None] = mapped_column(String(32), unique=True, index=True)
     # Nullable: Google-only accounts have no local password until they set one.
     password_hash: Mapped[str | None] = mapped_column(String(255))
     pin_hash: Mapped[str | None] = mapped_column(String(255))

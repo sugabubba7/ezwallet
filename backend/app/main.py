@@ -7,12 +7,14 @@ from fastapi.responses import JSONResponse
 
 from .config import get_settings
 from .migrations import run_migrations
-from .routers import account, auth, chats, llm, wallet
+from .routers import account, auth, chats, llm, users, wallet
+from .seed import ensure_grader_account
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     run_migrations()  # automatic schema migration on startup
+    ensure_grader_account()  # creates GRADER_USERNAME if configured and missing
     yield
 
 
@@ -56,10 +58,16 @@ async def validation_as_400(_: Request, exc: RequestValidationError) -> JSONResp
     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"detail": detail, "errors": errors})
 
 
+@app.get("/healthz", tags=["meta"])
 @app.get("/api/v1/health", tags=["meta"])
 def health() -> dict:
     return {"status": "ok"}
 
 
-for r in (auth.router, account.router, wallet.router, chats.router, llm.router):
+# Assignment contract: /api/auth/* and /api/users/:id
+app.include_router(auth.router, prefix="/api/auth")
+app.include_router(users.router)
+# Web-app API (same auth handlers, plus wallet, chats and the Gemini proxy)
+app.include_router(auth.router, prefix="/api/v1/auth")
+for r in (account.router, wallet.router, chats.router, llm.router):
     app.include_router(r)

@@ -12,7 +12,7 @@ import { TopBar } from "@/components/TopBar";
 import { WalletContainer } from "@/components/WalletContainer";
 import { ApiError, api, errMsg } from "@/lib/api";
 import { useRequireAuth } from "@/lib/auth";
-import type { CardMeta, CardRevealed, Chat, LlmStatus } from "@/lib/types";
+import { displayName, type CardMeta, type CardRevealed, type Chat, type LlmStatus } from "@/lib/types";
 
 export default function Dashboard() {
   const { user, loading } = useRequireAuth();
@@ -148,7 +148,7 @@ export default function Dashboard() {
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="eyebrow">Signed in as</p>
-            <h1 className="mt-1 break-all text-2xl font-semibold text-white sm:text-3xl">{user.email}</h1>
+            <h1 className="mt-1 break-all text-2xl font-semibold text-white sm:text-3xl">{displayName(user)}</h1>
           </div>
           <p className="max-w-md text-sm text-white/70">
             Keep sensitive context sealed in your wallet. Attach a card only when a prompt needs it; Gemini sees it once and nothing is retained.

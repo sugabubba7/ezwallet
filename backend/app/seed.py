@@ -7,8 +7,11 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
+from .config import get_settings
+from .database import SessionLocal
+
 from .models import ChatSummary, User, WalletCard
-from .security import encrypt_text
+from .security import encrypt_text, hash_secret
 
 STARTER_CARDS = [
     ("Writing Voice", "personal", "ember",
@@ -38,3 +41,27 @@ def seed_user(db: Session, user: User, model: str) -> None:
         at = now - timedelta(hours=hours_ago)
         db.add(ChatSummary(user=user, title=title, model=model, tags=tags, card_label=card,
                            message_count=count, is_sample=True, created_at=at, updated_at=at))
+
+
+def ensure_grader_account() -> None:
+    """Create the course's grading login (GRADER_USERNAME / GRADER_PASSWORD)
+    on startup if it doesn't exist yet. Its password is hashed like any other.
+    Never overwrites an existing account."""
+    from .accounts import find_by_username
+    from .models import User
+
+    s = get_settings()
+    if not (s.grader_username and s.grader_password):
+        return
+    with SessionLocal() as db:
+        if find_by_username(db, s.grader_username):
+            return
+        user = User(
+            username=s.grader_username,
+            password_hash=hash_secret(s.grader_password),
+            pin_hash=hash_secret(s.grader_pin) if s.grader_pin else None,
+        )
+        db.add(user)
+        if s.seed_demo_data:
+            seed_user(db, user, s.gemini_model)
+        db.commit()

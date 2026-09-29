@@ -22,14 +22,26 @@ def _bearer(request: Request) -> str | None:
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
-    """Accepts the HTTP-only session cookie (browser) or a Bearer token (API clients)."""
-    token = request.cookies.get(SESSION_COOKIE) or _bearer(request)
+    """Accepts a Bearer token (API clients) or the HTTP-only session cookie (browser).
+
+    If an Authorization header is sent it is the ONLY credential considered:
+    a bad bearer token is a 401 even when a valid cookie is also present, and
+    a client juggling several accounts is never silently authenticated as
+    whichever account last set a cookie.
+    """
+    if "authorization" in request.headers:
+        token = _bearer(request)
+    else:
+        token = request.cookies.get(SESSION_COOKIE)
     if not token:
         raise UNAUTHORIZED
     payload = decode_token(token, "access")
     if not payload:
         raise UNAUTHORIZED
-    user = db.get(User, int(payload["sub"]))
+    try:
+        user = db.get(User, int(payload["sub"]))
+    except (KeyError, TypeError, ValueError):
+        raise UNAUTHORIZED from None
     if not user or user.token_version != payload.get("ver"):
         raise UNAUTHORIZED
     return user
@@ -58,6 +70,7 @@ def to_user_out(user: User) -> UserOut:
     return UserOut(
         id=user.id,
         email=user.email,
+        username=user.username,
         has_password=user.password_hash is not None,
         has_pin=user.pin_hash is not None,
         google_linked=user.google_sub is not None,

@@ -1,6 +1,7 @@
 export type User = {
   id: number;
-  email: string;
+  email: string | null;
+  username: string | null;
   has_password: boolean;
   has_pin: boolean;
   google_linked: boolean;
@@ -38,3 +39,6 @@ export type Chat = {
 };
 
 export type LlmStatus = { configured: boolean; model: string; endpoint: string };
+
+/** What to call the user on screen: username if set, else email. */
+export const displayName = (u: Pick<User, "email" | "username">) => u.username ?? u.email ?? "you";

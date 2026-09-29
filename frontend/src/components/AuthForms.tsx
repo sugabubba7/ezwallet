@@ -97,7 +97,8 @@ export function LoginForm() {
     setBusy(true);
     setError(null);
     try {
-      const res = await api<AuthRes>("/auth/login", { method: "POST", body: { email, password } });
+      const id = email.trim();
+      const res = await api<AuthRes>("/auth/login", { method: "POST", body: id.includes("@") ? { email: id, password } : { username: id, password } });
       setUser(res.user);
       router.replace("/dashboard");
     } catch (err) {
@@ -113,8 +114,8 @@ export function LoginForm() {
       <Divider />
       <form onSubmit={submit} className="space-y-4" noValidate>
         <div>
-          <Label htmlFor="email">Email</Label>
-          <input id="email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="you@example.com" required />
+          <Label htmlFor="email">Email or username</Label>
+          <input id="email" type="text" className="input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="you@example.com" required />
         </div>
         <div>
           <Label htmlFor="password">Password</Label>
