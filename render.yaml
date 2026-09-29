@@ -1,0 +1,36 @@
+# Render Blueprint for the EZ Wallet API (free tier).
+# Render dashboard → New → Blueprint → pick this repo. Values marked
+# `sync: false` are prompted for during setup; see DEPLOY.md.
+services:
+  - type: web
+    name: ezwallet-api
+    runtime: python
+    plan: free
+    region: oregon            # keep close to your Neon region (us-west-2)
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # Migrations run automatically on startup (see app/main.py lifespan).
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DATABASE_URL        # Neon connection string
+        sync: false
+      - key: JWT_SECRET          # random, 32+ chars
+        generateValue: true
+      - key: WALLET_ENCRYPTION_KEY   # Fernet key; generate locally (DEPLOY.md step 2)
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: CORS_ORIGINS        # your Vercel URL, e.g. https://ezwallet.vercel.app
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: SEED_DEMO_DATA
+        value: "true"

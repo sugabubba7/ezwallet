@@ -12,15 +12,19 @@ class Base(DeclarativeBase):
 
 
 def _make_engine(url: str) -> Engine:
-    connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
-    engine = create_engine(url, connect_args=connect_args)
-    if url.startswith("sqlite"):
-        @event.listens_for(engine, "connect")
-        def _sqlite_pragmas(dbapi_conn, _):  # noqa: ANN001
-            cur = dbapi_conn.cursor()
-            cur.execute("PRAGMA foreign_keys=ON")
-            cur.execute("PRAGMA journal_mode=WAL")
-            cur.close()
+    if not url.startswith("sqlite"):
+        # Serverless Postgres (e.g. Neon) drops idle connections: test each
+        # pooled connection before use and recycle them every few minutes.
+        return create_engine(url, pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=5)
+    engine = create_engine(url, connect_args={"check_same_thread": False})
+
+    @event.listens_for(engine, "connect")
+    def _sqlite_pragmas(dbapi_conn, _):  # noqa: ANN001
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA foreign_keys=ON")
+        cur.execute("PRAGMA journal_mode=WAL")
+        cur.close()
+
     return engine
 
 
