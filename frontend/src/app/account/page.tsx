@@ -29,7 +29,7 @@ function useAction() {
       setBusy(false);
     }
   };
-  return { busy, status, run };
+  return { busy, status, run, clear: () => setStatus(null) };
 }
 
 function StatusLine({ status }: { status: Status }) {
@@ -94,6 +94,7 @@ export default function AccountPage() {
     );
   }
   const needsPw = user.has_password;
+  const emailMatches = delEmail.trim().toLowerCase() === user.email.toLowerCase();
 
   return (
     <div className="min-h-screen overflow-x-hidden">
@@ -257,7 +258,9 @@ export default function AccountPage() {
           onSubmit={async (e) => {
             e.preventDefault();
             const ok = await del.run(async () => {
-              const r = await api<{ message: string }>("/account", { method: "DELETE", body: { confirm_email: delEmail, current_password: needsPw ? delPw : null } });
+              if (!emailMatches) throw new Error(`Type ${user.email} exactly to confirm`);
+              if (needsPw && !delPw) throw new Error("Enter your current password");
+              const r = await api<{ message: string }>("/account", { method: "DELETE", body: { confirm_email: delEmail.trim(), current_password: needsPw ? delPw : null } });
               return r.message;
             });
             // Full reload: drops every bit of in-memory state for the deleted account.
@@ -267,12 +270,19 @@ export default function AccountPage() {
           <p className="text-sm text-white/60">
             This cannot be undone. Type <strong className="text-white">{user.email}</strong> to confirm.
           </p>
-          <input className="input" value={delEmail} onChange={(e) => setDelEmail(e.target.value)} placeholder={user.email} aria-label="Confirm email" />
-          {needsPw && <PasswordField id="del-pw" value={delPw} onChange={setDelPw} autoComplete="current-password" placeholder="Current password" />}
+          <div>
+            <input className="input" value={delEmail} onChange={(e) => { setDelEmail(e.target.value); del.clear(); }} placeholder={user.email} aria-label="Confirm email" autoComplete="off" spellCheck={false} />
+            {delEmail && (
+              <p className={`mt-1.5 text-xs ${emailMatches ? "text-white/70" : "text-ember-200"}`}>
+                {emailMatches ? "✓ Email matches" : "Doesn't match your account email yet"}
+              </p>
+            )}
+          </div>
+          {needsPw && <PasswordField id="del-pw" value={delPw} onChange={(v) => { setDelPw(v); del.clear(); }} autoComplete="current-password" placeholder="Current password" />}
           <StatusLine status={del.status} />
           <div className="flex justify-end gap-2">
             <button type="button" className="btn-ghost" onClick={() => setDelOpen(false)}>Cancel</button>
-            <button className="btn-danger" disabled={del.busy || delEmail.toLowerCase() !== user.email || (needsPw && !delPw)}>
+            <button className="btn-danger" disabled={del.busy}>
               {del.busy && <Loader2 className="h-4 w-4 animate-spin" />} Delete account
             </button>
           </div>

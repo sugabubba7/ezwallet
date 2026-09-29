@@ -105,6 +105,11 @@ class DeleteAccountRequest(BaseModel):
     current_password: str | None = None
     confirm_email: EmailStr
 
+    @field_validator("confirm_email", mode="before")
+    @classmethod
+    def _strip_email(cls, v: object) -> object:
+        return v.strip() if isinstance(v, str) else v
+
 
 # ---------- Wallet ----------
 class UnlockRequest(BaseModel):
