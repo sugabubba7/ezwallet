@@ -14,6 +14,8 @@ A full-stack **LLM Data Wallet**. You keep sensitive context (a writing voice, a
 
 ---
 
+> **Tech stack & grading map:** see [TECH_STACK_AND_GRADING.md](TECH_STACK_AND_GRADING.md).
+>
 > **Live deployment:** follow **[DEPLOY.md](DEPLOY.md)** to put this on the web for free (Vercel + Render + Neon) in about 20 minutes.
 
 ## 1. Quick start
