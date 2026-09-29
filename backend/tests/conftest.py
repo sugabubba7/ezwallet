@@ -6,7 +6,8 @@ from cryptography.fernet import Fernet
 
 # Configure an isolated database + throwaway secrets BEFORE the app is imported.
 _tmp = Path(tempfile.mkdtemp()) / "test_wallet.db"
-os.environ["DATABASE_URL"] = f"sqlite:///{_tmp}"
+# TEST_DATABASE_URL lets the same suite run against Postgres (see README).
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL") or f"sqlite:///{_tmp}"
 os.environ["JWT_SECRET"] = "test-secret-" + "x" * 40
 os.environ["WALLET_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
 os.environ["GEMINI_API_KEY"] = "test-gemini-key"

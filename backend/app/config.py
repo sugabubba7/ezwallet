@@ -41,6 +41,16 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     seed_demo_data: bool = True
 
+    @field_validator("database_url")
+    @classmethod
+    def _normalize_db_url(cls, v: str) -> str:
+        """Hosted Postgres (Neon, Render, Heroku) hands out postgres:// or
+        postgresql:// URLs; SQLAlchemy needs the driver named explicitly."""
+        for prefix in ("postgres://", "postgresql://"):
+            if v.startswith(prefix):
+                return "postgresql+psycopg://" + v[len(prefix):]
+        return v
+
     @field_validator("google_client_id", "gemini_api_key", mode="before")
     @classmethod
     def _blank_to_none(cls, v: str | None) -> str | None:

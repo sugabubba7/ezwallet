@@ -5,13 +5,16 @@ A full-stack **LLM Data Wallet**. You keep sensitive context (a writing voice, a
 | Layer | Stack |
 |---|---|
 | Frontend | Next.js 15 (App Router) · TypeScript · Tailwind CSS · Framer Motion · Lucide React · one typeface (Inter), an orange + black palette, liquid-glass surfaces |
-| Backend | FastAPI · SQLAlchemy 2 · Alembic · SQLite (`wallet.db`) |
+| Backend | FastAPI · SQLAlchemy 2 · Alembic · SQLite (`wallet.db`) locally, PostgreSQL (Neon) in production |
+| Hosting | Vercel (frontend) · Render (API) · Neon (PostgreSQL), all free tier. See **[DEPLOY.md](DEPLOY.md)** |
 | Security | argon2id (passlib) · PyJWT in HTTP-only cookies · Fernet (AES-128-CBC + HMAC-SHA256) at rest · Google Identity Services |
 | LLM | Gemini REST API (`generativelanguage.googleapis.com`), `gemini-2.5-flash` by default |
 
 ![Dashboard](docs/screenshots/llm-execute.png)
 
 ---
+
+> **Live deployment:** follow **[DEPLOY.md](DEPLOY.md)** to put this on the web for free (Vercel + Render + Neon) in about 20 minutes.
 
 ## 1. Quick start
 
@@ -48,6 +51,8 @@ Open **http://localhost:3000**. It redirects to `/login`. Choose "Create a walle
 
 ```bash
 cd backend && pytest -q          # 32 tests: status codes, hashing, encryption, ZDR, ownership, sessions, migrations
+# same suite against PostgreSQL (what production uses):
+TEST_DATABASE_URL=postgresql://user@localhost:5432/ezw_test pytest -q
 cd frontend && npm run typecheck && npm run build
 ```
 
@@ -95,7 +100,8 @@ sqlite3 backend/wallet.db "select label, substr(content_encrypted,1,20) from wal
 │ Alembic migrations run in lifespan()             │
 └───────────────┬──────────────────────────────────┘
                 │ SQLAlchemy
-          backend/wallet.db (SQLite, WAL mode, FK cascade)
+          backend/wallet.db (SQLite, WAL mode, FK cascade) locally
+          Neon PostgreSQL (TLS, pooled + pre-ping) in production
 ```
 
 ### Repository layout
@@ -105,7 +111,7 @@ backend/
   app/
     main.py          app factory, lifespan migrations, 422→400 handler, security headers
     config.py        pydantic-settings; secrets are required, with no defaults
-    database.py      engine, session, SQLite pragmas
+    database.py      engine, session, SQLite pragmas / Postgres pool settings
     models.py        User, WalletCard, ChatSummary
     schemas.py       request/response models and validation
     security.py      argon2id, JWT, Fernet helpers
@@ -182,7 +188,7 @@ curl -s localhost:8000/api/v1/wallet/cards -H "Authorization: Bearer $TOKEN"
 |---|---|---|---|
 | `JWT_SECRET` | **yes** | none | HMAC key for session and vault JWTs (32+ characters) |
 | `WALLET_ENCRYPTION_KEY` | **yes** | none | Fernet key that encrypts card contents |
-| `DATABASE_URL` | no | `sqlite:///./wallet.db` | SQLAlchemy URL (a PostgreSQL URL also works, after installing a driver) |
+| `DATABASE_URL` | no | `sqlite:///./wallet.db` | SQLAlchemy URL. Production uses PostgreSQL: a `postgres://` or `postgresql://` URL (as Neon gives it) is converted to the bundled `psycopg` driver automatically |
 | `GEMINI_API_KEY` | no | none | From https://aistudio.google.com/apikey. Without it, execute returns 503 |
 | `GEMINI_MODEL` | no | `gemini-2.5-flash` | Any `generateContent` model |
 | `GEMINI_API_BASE` | no | `https://generativelanguage.googleapis.com/v1beta` | Override for testing |
@@ -220,7 +226,7 @@ The browser receives a Google ID token. The backend verifies its signature, audi
 
 ## 6. Database migrations
 
-Alembic manages the schema, and `app/main.py` runs `alembic upgrade head` inside the FastAPI lifespan, **so a plain `uvicorn` start always leaves the DB current.** `alembic/env.py` reads `DATABASE_URL` from settings, so no connection string lives in `alembic.ini`. `render_as_batch=True` keeps `ALTER TABLE` migrations working on SQLite.
+Alembic manages the schema, and `app/main.py` runs `alembic upgrade head` inside the FastAPI lifespan, **so a plain `uvicorn` start always leaves the DB current.** `alembic/env.py` reads `DATABASE_URL` from settings, so no connection string lives in `alembic.ini`. `render_as_batch=True` keeps `ALTER TABLE` migrations working on SQLite. Both revisions have been run up, down and up again against PostgreSQL 16.
 
 | Revision | Change |
 |---|---|
