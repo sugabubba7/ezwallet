@@ -42,3 +42,41 @@ export type LlmStatus = { configured: boolean; model: string; endpoint: string }
 
 /** What to call the user on screen: username if set, else email. */
 export const displayName = (u: Pick<User, "email" | "username">) => u.username ?? u.email ?? "you";
+
+// ---- Competitor tracker (assignment 1B). Everything below came from the web: render as TEXT only. ----
+export type TrackerSource = { url: string; title: string; quote: string };
+export type TrackerDevelopment = {
+  id: number;
+  rank: number;
+  section: "new" | "still";
+  title: string;
+  summary: string;
+  sources: TrackerSource[];
+};
+export type TrackerRunSummary = {
+  id: number;
+  started_at: string;
+  finished_at: string | null;
+  status: "running" | "complete" | "partial" | "failed";
+  partial_reason: string | null;
+  topic: string;
+  k: number;
+  stats: Record<string, unknown>;
+  new_count: number;
+  still_count: number;
+  dropped_count: number;
+  article_counts: Record<"fetched" | "skipped" | "rejected" | "failed", number>;
+};
+export type TrackerRunDetail = TrackerRunSummary & {
+  report_md: string;
+  developments: TrackerDevelopment[];
+  dropped: { id: number; title: string; summary: string }[];
+};
+export type TrackerArticle = {
+  id: number;
+  url: string;
+  title: string;
+  status: "fetched" | "skipped" | "rejected" | "failed";
+  reason: string | null;
+  fetched_at: string;
+};

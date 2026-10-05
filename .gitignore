@@ -25,3 +25,8 @@ node_modules/
 out/
 
 .DS_Store
+
+# scratch/dev outputs of the tracker (the graded run1/run2 files ARE committed)
+reports/dev-*
+traces/dev-*
+tracker/.venv/

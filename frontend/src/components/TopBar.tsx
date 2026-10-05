@@ -1,6 +1,6 @@
 "use client";
 
-import { Cpu, LayoutGrid, LogOut, UserCog } from "lucide-react";
+import { Cpu, LayoutGrid, LogOut, Radar, Trophy, UserCog } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
@@ -17,6 +17,8 @@ export function TopBar({ llm }: { llm?: LlmStatus | null }) {
 
   const nav = [
     { href: "/dashboard", label: "Wallet", icon: LayoutGrid },
+    { href: "/tracker", label: "Competitors", icon: Radar },
+    { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/account", label: "Account", icon: UserCog },
   ];
 

@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from .config import get_settings
 from .migrations import run_migrations
-from .routers import account, auth, chats, llm, users, wallet
+from .routers import account, auth, chats, llm, tracker, users, wallet
 from .seed import ensure_grader_account
 
 
@@ -40,7 +40,7 @@ async def security_headers(request: Request, call_next):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
-    if request.url.path.startswith("/api/v1/wallet") or request.url.path.startswith("/api/v1/llm"):
+    if request.url.path.startswith("/api/v1/wallet") or request.url.path.startswith("/api/v1/llm") or request.url.path.startswith("/api/v1/tracker"):
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -69,5 +69,5 @@ app.include_router(auth.router, prefix="/api/auth")
 app.include_router(users.router)
 # Web-app API (same auth handlers, plus wallet, chats and the Gemini proxy)
 app.include_router(auth.router, prefix="/api/v1/auth")
-for r in (account.router, wallet.router, chats.router, llm.router):
+for r in (account.router, wallet.router, chats.router, llm.router, tracker.router):
     app.include_router(r)

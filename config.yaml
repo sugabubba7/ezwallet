@@ -1,0 +1,101 @@
+# Policy for the competitor tracker. The runtime reads this; the model cannot change it,
+# and nothing fetched from the web can either.
+
+topic: "Competitors to EZ Wallet: products that store, encrypt or manage personal context/memory for AI chats (AI memory vaults, prompt-context managers, privacy-first LLM gateways). Track launches, pricing changes, funding, and security or privacy incidents."
+k: 5   # 3 <= k <= 10
+
+model:
+  provider: groq                # gemini | groq | openrouter | openai
+  name: qwen/qwen3.8-27b
+  temperature: 0.2
+  max_output_tokens: 2500       # Groq's free tier allows 8,000 tokens/min: prompt + this must fit in one request
+  # reasoning_effort: low      # gpt-oss models only: keeps hidden reasoning tokens small
+  # thinking_budget: 0         # only for 2.5-series models; Gemini 3.x manages thinking itself
+  price_per_million_input_usd: 0.15    # nominal paid-tier prices; the free tier bills $0 but we still track the figure
+  price_per_million_output_usd: 0.60
+
+instructions: |
+  You are a research analyst for EZ Wallet, a PIN-locked, encrypted "data wallet" that lets people keep
+  sensitive context (writing style, project notes, health info) in cards and attach one to an AI chat
+  through a zero-retention proxy. You track its COMPETITORS and the developments that matter to it.
+
+  Process (be efficient: every model call costs time and tokens):
+  1. Step 1: call search_web TWICE in the same step with different, specific queries.
+  2. Step 2: fetch_article for the 3-4 most promising results IN THE SAME STEP (several calls at once). Skip any
+     result marked already_seen. Prefer company blogs, docs, pricing pages and reputable press.
+  3. Optionally one more search/fetch round for gaps, then call finish exactly once with the ranked top K.
+     Report K developments when at least K qualifying events exist; otherwise report fewer and say why in `notes`.
+     The tool results list the articles you have already fetched: never fetch one of them again.
+
+  Players worth checking (not exhaustive): Mem0 / OpenMemory, Letta, Zep, Supermemory, Pieces, Limitless,
+  Personal.ai, Kin, ChatGPT/Claude/Gemini memory features, Obsidian-based AI memory plugins, and any new
+  startup selling a "memory layer", "context vault" or privacy-first LLM gateway.
+
+  A "development" is a dated EVENT: a product launch or feature release, a pricing change, a funding round, an
+  acquisition, or a security/privacy incident, from roughly the last 60 days. Explainers, listicles and
+  "best X in 2026" comparisons are NOT developments unless they report such an event. Never fetch through proxy,
+  reader or cache services (r.jina.ai, archive.org, ...): they are blocked and waste a step.
+
+  Ranking: most important first. Importance = how directly it affects EZ Wallet (a competing product launch,
+  a pricing change, funding, a security/privacy incident, a major platform feature that replaces EZ Wallet).
+
+  Provenance (strict): every development needs >= 1 source URL you actually fetched this run, and for each
+  source a `quote` copied VERBATIM (40-300 chars) from the article body as shown to you: the sentence that states
+  the event (who did what, when or how much), never the headline. The summary may
+  only state things the quoted text supports. Never invent numbers, prices, dates or names.
+
+  Memory: you are shown the developments reported in earlier runs with their ids. If a new article reports
+  one of them, reuse its id in `existing_id` and attach the new URL as an additional source instead of
+  creating a duplicate. Re-include earlier developments that are still among the K most important.
+
+relevance_keywords: [memory, context, privacy, private, encrypt, vault, launch, announce, release, pricing, price, funding, raises, raised,
+                     acquire, acquisition, breach, vulnerab, security, wallet, agent, personal, open-source, series, seed]
+
+tools: [search_web, fetch_article, finish]
+
+limits:
+  max_steps: 16                  # model calls (the reserved final call is extra)
+  max_fetches: 8
+  max_searches: 4
+  max_total_tokens: 90000        # prompt + output tokens across the whole run
+  max_cost_usd: 0.25             # nominal, from the prices above
+  max_wall_seconds: 900          # includes time spent waiting out per-minute rate limits
+  max_article_chars: 1000        # text of one article shown to the model (the free tier allows 8k tokens/min)
+  max_request_tokens: 5600       # provider's per-request input cap (Groq free tier: 7000); the runtime trims old article text to stay under it
+  finalize_reserve_tokens: 7000  # kept back so a budget stop can still produce a model-written report
+
+fetch:
+  allowed_schemes: [http, https]
+  allowed_hosts: ["*"]           # fnmatch patterns; narrow this to restrict the crawl
+  blocked_hosts:                 # fetch proxies / reader services / caches: the model must not launder fetches through them
+    - "*.jina.ai"
+    - "webcache.googleusercontent.com"
+    - "*.archive.org"
+    - "archive.ph"
+    - "archive.today"
+    - "*.12ft.io"
+  allowed_ports: [80, 443]
+  timeout_seconds: 10            # per connect/read
+  total_timeout_seconds: 20      # whole request incl. redirects (slow-loris guard)
+  max_bytes: 4000000
+  max_redirects: 3
+  user_agent: "ezwallet-tracker/1.0 (course project; contact via repo)"
+
+search:
+  max_results: 5
+  time_range: month              # day|week|month|year
+
+retry:
+  max_retries: 3                 # after the first attempt
+  base_delay: 2.0
+  max_delay: 30.0
+  max_retry_after: 90.0          # a server asking for longer than this = give up
+
+dedupe:
+  auto_merge_similarity: 0.70          # code merges "new" items this similar to an existing development
+  min_similarity_to_trust_model: 0.12  # code refuses a model-claimed match below this
+
+state:
+  api_url_env: TRACKER_API_URL
+  login_env: TRACKER_LOGIN
+  password_env: TRACKER_PASSWORD

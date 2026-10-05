@@ -152,7 +152,7 @@ Everything under `/api/v1/…`:
 
 ## 6. Checks
 
-**Automated tests** (46 tests: every endpoint, all three rules, and a simulation of the grading script with two accounts):
+**Automated tests** (54 tests: every endpoint, all three rules, and a simulation of the grading script with two accounts):
 ```bash
 cd backend
 source .venv/bin/activate
@@ -198,11 +198,117 @@ backend/
   app/deps.py            token checking (Rule 2)
   app/security.py        argon2id, JWT, Fernet encryption
   app/config.py          settings loading + first-run secret generation
-  alembic/versions/      database migrations 0001–0003
+  app/routers/tracker.py tracker API (assignment 1B)
+  alembic/versions/      database migrations 0001–0004
   tests/                 pytest suite (test_rubric.py mirrors the grading script)
   .env                   committed grading config (throwaway DB only)
   .env.example           every variable, documented
+tracker/
+  agent.py guard.py fetcher.py search.py llm.py ...   the hand-written agent (see section 8)
+config.yaml              tracker policy: topic, K, model, limits, allowed hosts
 frontend/
-  src/app/               pages: login, register, dashboard, account
+  src/app/               pages: login, register, dashboard, account, tracker
   src/components/        wallet, carousel, console, modals
 ```
+
+---
+
+## 8. Assignment 1B: the agentic competitor tracker
+
+An agent that finds the top **K = 5** developments about **competitors to EZ Wallet** (AI memory vaults, context managers, privacy-first LLM gateways), ranks them, cites a source and a verbatim quote for each, and remembers what it has seen. Run it again and it reports **New since last run → Still in top K → Dropped**. Results appear on the **Competitors** page of this app (behind the normal login).
+
+The agent loop is hand-written ([tracker/agent.py](tracker/agent.py)); there is no agent framework. Policy lives in [config.yaml](config.yaml). [AGENT.md](AGENT.md) answers the design questions.
+
+### Prerequisites
+Everything in section 1, plus keys in `tracker/.env.local` (see [tracker/.env.example](tracker/.env.example)):
+
+| Variable | Where to get it |
+|---|---|
+| `GROQ_API_KEY` (or `GEMINI_API_KEY` / `OPENROUTER_API_KEY`, matching `model.provider` in `config.yaml`) | https://console.groq.com/keys |
+| `TAVILY_API_KEY` | https://app.tavily.com |
+| `TRACKER_API_URL`, `TRACKER_LOGIN`, `TRACKER_PASSWORD` | the backend the tracker saves to and the account whose page shows the results (`NYUgrader` and its password are in section 2) |
+
+Set a spend cap on any paid key before the first run. Free tiers have **daily** caps as well as per-minute ones; the tracker treats a daily cap as terminal and stops.
+
+### Commands, in order
+
+**1. Bring up the A1 backend and frontend** (two terminals, as in section 2). Or point `TRACKER_API_URL` at the deployed backend and skip the local one.
+```bash
+cd backend && source .venv/bin/activate && uvicorn app.main:app --port 8000
+```
+```bash
+cd frontend && npm install && npm run dev
+```
+
+**2. One-time tracker setup** (from the repository root)
+```bash
+python3 -m venv tracker/.venv
+tracker/.venv/bin/pip install -r tracker/requirements.txt
+cp tracker/.env.example tracker/.env.local
+```
+Then edit `tracker/.env.local` and fill in the keys.
+
+**3. Run the tracker**
+```bash
+tracker/.venv/bin/python -m tracker run --report reports/run1.md --trace traces/run1.jsonl
+```
+
+**4. Run it again** (at least a day later, so there is something new)
+```bash
+tracker/.venv/bin/python -m tracker run --report reports/run2.md --trace traces/run2.jsonl
+```
+
+**5. Reset its saved state**
+```bash
+tracker/.venv/bin/python -m tracker reset --yes
+```
+
+Exit codes: `0` complete · `1` partial (a budget ran out; the report says why) · `2` terminal failure (bad key, daily quota, payment required) · `3` gave up after retries (network down).
+
+Open **http://localhost:3000/tracker** (or your Vercel URL + `/tracker`) after logging in.
+
+**Run the tools without the model**
+```bash
+tracker/.venv/bin/python -m tracker.tools search_web "ai memory vault launch"
+tracker/.venv/bin/python -m tracker.tools fetch_article https://example.com/
+tracker/.venv/bin/python -m tracker.tools fetch_article http://169.254.169.254/   # rejected by the guardrail
+tracker/.venv/bin/python -m tracker.tools finish some_report.json
+```
+
+**Tests** (no network, no model, no keys needed)
+```bash
+tracker/.venv/bin/python -m pytest tracker/tests -q        # guardrail, failure handling, budgets, recrawl, injection
+cd backend && pytest -q                                    # includes the tracker API tests
+```
+
+### Where the agent keeps its memory
+Only in the backend, through the API below. The tracker never opens the database. Every endpoint returns **401** without a valid token, and every query is filtered by the caller's `user_id`, so one user cannot read or change another's tracker data (other users' run ids return 404).
+
+| Method | Path | Auth | Body | Success | Errors |
+|---|---|---|---|---|---|
+| GET | `/api/v1/tracker/state` | yes | none | **200** seen URLs, developments with sources, last top K | 401 |
+| DELETE | `/api/v1/tracker/state` | yes | none | **200** `{"message": …}` (forgets everything for this user) | 401 |
+| POST | `/api/v1/tracker/runs` | yes | `{topic, k}` | **201** `{id}` | 400 · 401 |
+| POST | `/api/v1/tracker/runs/:id/finish` | yes | `{status, partial_reason?, report_md, stats, articles[], developments[]}` | **200** run detail with the new/still/dropped split | 400 · 401 · 404 · 409 already finished |
+| PUT | `/api/v1/tracker/runs/:id/report` | yes | `{report_md}` | **200** | 401 · 404 |
+| GET | `/api/v1/tracker/runs` | yes | none | **200** run history | 401 |
+| GET | `/api/v1/tracker/runs/latest` | yes | none | **200** latest report | 401 · 404 none yet |
+| GET | `/api/v1/tracker/runs/:id` | yes | none | **200** report for one run | 401 · 404 |
+| GET | `/api/v1/tracker/runs/:id/articles` | yes | none | **200** every article attempt: fetched / skipped / rejected / failed | 401 · 404 |
+
+### Schema (migration `0004_tracker`)
+```
+tracker_runs          id, user_id→users, started_at, finished_at, status(running|complete|partial|failed),
+                      partial_reason, topic, k, report_md, stats(JSON), changes(JSON: new/still/dropped)
+tracker_developments  id, user_id→users, title, summary, first_run_id→tracker_runs, created_at, updated_at
+tracker_sources       id, development_id→tracker_developments, url, title, quote, run_id        UNIQUE(development_id, url)
+tracker_articles      id, user_id→users, run_id→tracker_runs, url, canonical_url, title,
+                      status(fetched|skipped|rejected|failed), reason, content_hash, fetched_at
+tracker_topk          id, run_id→tracker_runs, development_id→tracker_developments, rank, section(new|still), summary
+```
+Why this shape: a *development* is one real-world event with **many** supporting URLs (`tracker_sources`), so a new URL about an old event attaches to the existing development instead of creating a duplicate. `tracker_articles` is the URL-level cache (what to skip next time) and the per-run fetch log the page displays. `tracker_topk` is one row per ranked item per run, so "what was the top K last time?" is a query, not a guess.
+
+### Security notes
+- `fetch_article` ([tracker/guard.py](tracker/guard.py)) refuses non-http(s) schemes, URLs with credentials, odd ports, and any host that resolves to a loopback, private, link-local, carrier-grade-NAT, multicast or reserved address. It checks every redirect hop and connects to the address it validated, so a hostile DNS answer cannot swap in a private IP. It enforces a per-read timeout, a total timeout and a byte limit, and accepts only text content types.
+- Fetched text reaches the model only inside `<untrusted_web_content>` tags, and the closing tag is stripped from page text so it cannot break out. Tools, budgets and URL checks live in the runtime, so no page can change them.
+- The Competitors page renders every web-derived string as React text (no `dangerouslySetInnerHTML`, no markdown renderer), and only makes `http(s)` URLs clickable.
