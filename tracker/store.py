@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 import httpx
 
-from .errors import AuthError, RetriesExhausted, TransientError
+from .errors import AuthError, BadRequest, RetriesExhausted, TransientError
 from .http_errors import TRANSPORT_ERRORS, raise_for_service, transport_error
 from .retry import RetryPolicy, call_with_retries
 from .tracer import Tracer
@@ -17,7 +17,7 @@ class ApiStore:
         self.base = base_url.rstrip("/")
         self._login_id, self._password = login, password
         self.retry, self.tracer, self.sleep = retry, tracer, sleep
-        self.client = client or httpx.Client(timeout=60)
+        self.client = client or httpx.Client(timeout=120)
         self.token: str | None = None
         self.retries = 0
 
@@ -105,7 +105,14 @@ class ApiStore:
         return self._call("POST", "/api/v1/tracker/runs", json={"topic": topic, "k": k}, tool="start_run").json()["id"]
 
     def finish_run(self, run_id: int, payload: dict) -> dict:
-        return self._call("POST", f"/api/v1/tracker/runs/{run_id}/finish", json=payload, tool="save_run").json()
+        try:
+            return self._call("POST", f"/api/v1/tracker/runs/{run_id}/finish", json=payload, tool="save_run").json()
+        except BadRequest as e:
+            # A save that timed out on our side may still have been applied by the server. The retry then gets
+            # 409 "Run already finished". That means the data IS saved, so read it back instead of reporting a loss.
+            if "409" not in str(e):
+                raise
+            return self._call("GET", f"/api/v1/tracker/runs/{run_id}", tool="confirm_saved").json()
 
     def reset(self) -> None:
         self._call("DELETE", "/api/v1/tracker/state", tool="reset_state")

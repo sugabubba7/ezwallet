@@ -6,7 +6,7 @@ k: 5   # 3 <= k <= 10
 
 model:
   provider: openrouter          # gemini | groq | openrouter | openai   (Groq's free tier caps requests at 7k tokens: see README)
-  name: qwen/qwen3.8-27b:free
+  name: nvidia/nemotron-3-super-120b-a12b:free   # qwen/qwen3.8-27b:free was withdrawn from OpenRouter's free tier on 2026-10-05
   temperature: 0.2
   max_output_tokens: 3000       # the final report is the longest reply (K developments with quotes)
   # reasoning_effort: low       # gpt-oss models only: keeps hidden reasoning tokens small

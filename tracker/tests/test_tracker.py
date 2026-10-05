@@ -506,3 +506,21 @@ def test_tool_call_is_recovered_from_a_provider_parse_failure():
     assert _recover_call('{"query": "x"}', ["search_web", "finish"]) == ("search_web", {"query": "x"})
     assert _recover_call("not json at all", ["finish"]) is None
     assert _recover_call('{"url": "http://x"}', ["finish"]) is None   # a fetch is not allowed in this turn
+
+
+def test_save_that_timed_out_but_was_applied_is_confirmed_not_reported_lost():
+    from tracker.store import ApiStore
+    calls = []
+
+    def handler(req):
+        calls.append((req.method, req.url.path))
+        if req.url.path.endswith("/finish"):
+            if len([c for c in calls if c[1].endswith("/finish")]) == 1:
+                raise httpx.ReadTimeout("response lost")          # the server applied it, but we never saw the answer
+            return httpx.Response(409, json={"detail": "Run already finished"})  # the retry
+        return httpx.Response(200, json={"id": 7, "status": "complete", "developments": [], "dropped": []})
+    store = ApiStore("http://x", "u", "p", RetryPolicy(max_retries=2, base_delay=0), Tracer(None),
+                     httpx.Client(transport=httpx.MockTransport(handler)), sleep=lambda s: None)
+    store.token = "t"
+    assert store.finish_run(7, {})["status"] == "complete"
+    assert calls[-1] == ("GET", "/api/v1/tracker/runs/7")
