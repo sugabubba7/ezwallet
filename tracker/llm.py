@@ -140,8 +140,17 @@ class OpenAICompat:
             body["reasoning_effort"] = self.cfg.reasoning_effort
         resp = _post(self.client, self.provider, f"{self.base}/chat/completions", {"Authorization": f"Bearer {key}"}, body)
         if resp.status_code == 400 and "tool_use_failed" in resp.text:
-            # The model produced a malformed tool call. That is a bad turn, not a failed run: nudge and go on.
-            return LlmResult(raw=None, finish_reason="tool_use_failed")
+            # The model produced a tool call the provider could not parse (gpt-oss sometimes wraps it as
+            # {"name": "commentary", "arguments": {...}} or emits bare JSON). The arguments are usually intact in
+            # `failed_generation`, so recover them; the runtime validates them like any other call.
+            try:
+                gen = str(resp.json().get("error", {}).get("failed_generation", ""))
+            except ValueError:
+                gen = ""
+            call = _recover_call(gen, allowed)
+            if call:
+                return LlmResult(calls=[call], call_ids=["recovered0"], raw=None, finish_reason="tool_calls (recovered from failed_generation)")
+            return LlmResult(raw=None, finish_reason=f"tool_use_failed {gen[:300]!r}")
         raise_for_service(self.provider, resp)
         data = resp.json()
         usage = data.get("usage") or {}
@@ -158,6 +167,31 @@ class OpenAICompat:
             ids.append(str(tc.get("id") or f"c{len(ids)}"))
         return LlmResult(calls=calls, call_ids=ids, text=msg.get("content") or "", finish_reason=str(choice0.get("finish_reason", "")),
                          prompt_tokens=int(usage.get("prompt_tokens", 0)), output_tokens=int(usage.get("completion_tokens", 0)))
+
+
+def _recover_call(generation: str, allowed: list[str]) -> tuple[str, dict] | None:
+    """Pull a tool call out of a provider's 'failed_generation' text, or None if it is not clearly one."""
+    try:
+        data = json.loads(generation.strip())
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    args = data.get("arguments", data)
+    if isinstance(args, str):
+        try:
+            args = json.loads(args)
+        except ValueError:
+            return None
+    if not isinstance(args, dict):
+        return None
+    name = data.get("name") if data.get("name") in allowed else None
+    if name is None:  # infer from the argument names
+        for tool, key in (("finish", "report"), ("finish", "developments"), ("search_web", "query"), ("fetch_article", "url")):
+            if key in args and tool in allowed:
+                name = tool
+                break
+    return (name, args) if name else None
 
 
 def make_llm(cfg: Config):

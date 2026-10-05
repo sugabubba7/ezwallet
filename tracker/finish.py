@@ -108,8 +108,8 @@ def validate(report, *, k: int, known: dict[int, Known], fetched: dict[str, dict
                 errors.append(f"{stag}: malformed url")
                 continue
             if canon in fetched:
-                if len(quote) < 40 or normalize_text(quote) == normalize_text(fetched[canon]["title"]):
-                    errors.append(f"{stag}: quote must be a verbatim passage of >= 40 chars from the article body that states the event "
+                if len(quote) < 30 or normalize_text(quote) == normalize_text(fetched[canon]["title"]):
+                    errors.append(f"{stag}: quote must be a verbatim passage of >= 30 chars from the article body that states the event "
                                   "(who did what, and when/how much), not the headline")
                     continue
                 if normalize_text(quote) not in norm_text_of(canon):
@@ -174,3 +174,26 @@ def validate(report, *, k: int, known: dict[int, Known], fetched: dict[str, dict
     for n, d in enumerate(devs, start=1):
         d.rank = n
     return devs, []
+
+
+def validate_salvage(report, **kw) -> tuple[list[Dev], list[str]]:
+    """Second-chance validation: keep every development that is fully supported and drop the ones that are not,
+    instead of rejecting the whole report. Returns (developments, reasons the dropped ones failed)."""
+    if isinstance(report, str):
+        try:
+            report = json.loads(report)
+        except ValueError:
+            return [], ["report must be an object with a `developments` list"]
+    if not isinstance(report, dict) or not isinstance(report.get("developments"), list) or not report["developments"]:
+        return [], ["report must be an object with a non-empty `developments` list"]
+    kept, dropped = [], []
+    for i, d in enumerate(report["developments"][: kw["k"]]):
+        _, errs = validate({"developments": [d]}, **kw)
+        if errs:
+            dropped += [f"developments[{i}] dropped: {e.split(': ', 1)[-1]}" for e in errs[:1]]
+        else:
+            kept.append(d)
+    if not kept:
+        return [], dropped or ["no development was fully supported by its sources"]
+    devs, errs = validate({"developments": kept}, **kw)
+    return devs, dropped + errs

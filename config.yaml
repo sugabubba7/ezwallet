@@ -5,11 +5,11 @@ topic: "Competitors to EZ Wallet: products that store, encrypt or manage persona
 k: 5   # 3 <= k <= 10
 
 model:
-  provider: groq                # gemini | groq | openrouter | openai
-  name: qwen/qwen3.8-27b
+  provider: openrouter          # gemini | groq | openrouter | openai   (Groq's free tier caps requests at 7k tokens: see README)
+  name: qwen/qwen3.8-27b:free
   temperature: 0.2
-  max_output_tokens: 2500       # Groq's free tier allows 8,000 tokens/min: prompt + this must fit in one request
-  # reasoning_effort: low      # gpt-oss models only: keeps hidden reasoning tokens small
+  max_output_tokens: 3000       # the final report is the longest reply (K developments with quotes)
+  # reasoning_effort: low       # gpt-oss models only: keeps hidden reasoning tokens small
   # thinking_budget: 0         # only for 2.5-series models; Gemini 3.x manages thinking itself
   price_per_million_input_usd: 0.15    # nominal paid-tier prices; the free tier bills $0 but we still track the figure
   price_per_million_output_usd: 0.60
@@ -24,17 +24,19 @@ instructions: |
   2. Step 2: fetch_article for the 3-4 most promising results IN THE SAME STEP (several calls at once). Skip any
      result marked already_seen. Prefer company blogs, docs, pricing pages and reputable press.
   3. Optionally one more search/fetch round for gaps, then call finish exactly once with the ranked top K.
-     Report K developments when at least K qualifying events exist; otherwise report fewer and say why in `notes`.
+     Report exactly K developments whenever you fetched at least K relevant articles (fewer only if the material truly
+     is not there, and then say why in `notes`).
      The tool results list the articles you have already fetched: never fetch one of them again.
 
   Players worth checking (not exhaustive): Mem0 / OpenMemory, Letta, Zep, Supermemory, Pieces, Limitless,
   Personal.ai, Kin, ChatGPT/Claude/Gemini memory features, Obsidian-based AI memory plugins, and any new
   startup selling a "memory layer", "context vault" or privacy-first LLM gateway.
 
-  A "development" is a dated EVENT: a product launch or feature release, a pricing change, a funding round, an
-  acquisition, or a security/privacy incident, from roughly the last 60 days. Explainers, listicles and
-  "best X in 2026" comparisons are NOT developments unless they report such an event. Never fetch through proxy,
-  reader or cache services (r.jina.ai, archive.org, ...): they are blocked and waste a step.
+  A "development" is a concrete, sourced fact about a competitor or the competitive landscape: a product launch or
+  feature release, a pricing change, a funding round, an acquisition, a security/privacy incident, or a significant
+  capability or market claim stated in an article. Prefer dated events from roughly the last 60 days, but do not
+  discard a substantial, specific finding just because the article is also an explainer or comparison.
+  Never fetch through proxy, reader or cache services (r.jina.ai, archive.org, ...): they are blocked and waste a step.
 
   Ranking: most important first. Importance = how directly it affects EZ Wallet (a competing product launch,
   a pricing change, funding, a security/privacy incident, a major platform feature that replaces EZ Wallet).
@@ -57,12 +59,12 @@ limits:
   max_steps: 16                  # model calls (the reserved final call is extra)
   max_fetches: 8
   max_searches: 4
-  max_total_tokens: 90000        # prompt + output tokens across the whole run
+  max_total_tokens: 150000       # prompt + output tokens across the whole run
   max_cost_usd: 0.25             # nominal, from the prices above
   max_wall_seconds: 900          # includes time spent waiting out per-minute rate limits
-  max_article_chars: 1000        # text of one article shown to the model (the free tier allows 8k tokens/min)
-  max_request_tokens: 5600       # provider's per-request input cap (Groq free tier: 7000); the runtime trims old article text to stay under it
-  finalize_reserve_tokens: 7000  # kept back so a budget stop can still produce a model-written report
+  max_article_chars: 2500        # text of one article shown to the model (the free tier allows 8k tokens/min)
+  max_request_tokens: null       # set (e.g. 5600) for providers with a small per-request cap, such as Groq's free tier
+  finalize_reserve_tokens: 20000 # kept back so a budget stop can still produce a model-written report
 
 fetch:
   allowed_schemes: [http, https]
@@ -86,8 +88,8 @@ search:
   time_range: month              # day|week|month|year
 
 retry:
-  max_retries: 3                 # after the first attempt
-  base_delay: 2.0
+  max_retries: 5                 # after the first attempt (free tiers return short bursts of 429s)
+  base_delay: 5.0
   max_delay: 30.0
   max_retry_after: 90.0          # a server asking for longer than this = give up
 

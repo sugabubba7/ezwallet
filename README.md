@@ -224,7 +224,7 @@ Everything in section 1, plus keys in `tracker/.env.local` (see [tracker/.env.ex
 
 | Variable | Where to get it |
 |---|---|
-| `GROQ_API_KEY` (or `GEMINI_API_KEY` / `OPENROUTER_API_KEY`, matching `model.provider` in `config.yaml`) | https://console.groq.com/keys |
+| `OPENROUTER_API_KEY` (or `GROQ_API_KEY` / `GEMINI_API_KEY`, matching `model.provider` in `config.yaml`; the graded runs used OpenRouter's free `qwen/qwen3.8-27b:free`) | https://openrouter.ai/keys |
 | `TAVILY_API_KEY` | https://app.tavily.com |
 | `TRACKER_API_URL`, `TRACKER_LOGIN`, `TRACKER_PASSWORD` | the backend the tracker saves to and the account whose page shows the results (`NYUgrader` and its password are in section 2) |
 

@@ -54,3 +54,12 @@ class BudgetExceeded(TrackerError):
 
 class ArticleError(TrackerError):
     """A permanent, per-URL failure (404, 403...). Not worth retrying, and not a run failure."""
+
+
+class RequestTooLarge(TerminalError):
+    """The provider refused the prompt as larger than its per-request cap. The agent shrinks its prompt and retries;
+    this only reaches the user if shrinking cannot help."""
+
+    def __init__(self, message: str, limit: int | None = None, requested: int | None = None):
+        super().__init__(message)
+        self.limit, self.requested = limit, requested

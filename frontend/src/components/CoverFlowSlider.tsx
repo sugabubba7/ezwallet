@@ -1,26 +1,14 @@
 "use client";
 
 /**
- * Horizontal cover-flow of past chat sessions.
- * Only metadata is shown because only metadata is stored (ZDR): when the chat
- * happened and how many texts were exchanged, never what was said.
- *
- * Depth: the front card is fully opaque and sits on top. Neighbours are
- * semi-opaque and blurred, and the next ones out are blurred almost out of
- * existence, so no back-card edge ever reads through the front.
+ * Chat archive: the selected session's card sits at the LEFT; older sessions stack straight back behind it
+ * (blurred, fading with depth) and sessions already passed tuck away behind the front card, so nothing is ever
+ * to the left of it. The right side summarises the selected session.
+ * Only metadata is shown because only metadata is stored: when the chat happened, how many texts were
+ * exchanged, which model answered and which context card was attached, never what was said.
  */
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
-import {
-  FastForward,
-  MessagesSquare,
-  MoreHorizontal,
-  Pause,
-  Play,
-  Rewind,
-  ShieldCheck,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { CalendarDays, Clock, Cpu, FastForward, Gauge, Layers, MessagesSquare, MoreHorizontal, Rewind, Sparkles, Tag, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Chat } from "@/lib/types";
 
@@ -55,6 +43,26 @@ export function timeAgo(iso: string) {
 
 export const textsLabel = (n: number) => `${n} ${n === 1 ? "text" : "texts"}`;
 
+/** Which company's LLM answered, from the model id ("gemini-2.5-flash" -> "Google Gemini"). */
+export function providerOf(model: string) {
+  const m = model.toLowerCase();
+  if (m.startsWith("gemini") || m.startsWith("gemma")) return "Google Gemini";
+  if (m.startsWith("gpt") || m.startsWith("o1") || m.startsWith("o3")) return "OpenAI";
+  if (m.startsWith("claude")) return "Anthropic Claude";
+  if (m.startsWith("llama")) return "Meta Llama";
+  return prettyModel(model.split(/[-_/]/)[0] || model);
+}
+
+/** "today", "yesterday", "6 days ago" (calendar days, in the viewer's time zone). */
+export function daysAgo(iso: string) {
+  const d = parseUtc(iso);
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const now = new Date();
+  const b = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const n = Math.max(0, Math.round((b - a) / 86_400_000));
+  return n === 0 ? "today" : n === 1 ? "yesterday" : `${n} days ago`;
+}
+
 function when(iso: string) {
   const d = parseUtc(iso);
   const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); // "8:14 PM"
@@ -63,15 +71,15 @@ function when(iso: string) {
   return { clock, meridiem, date };
 }
 
-type Pose = { x: number; rotateY: number; scale: number; opacity: number; blur: number; brightness: number; zIndex: number };
+type Pose = { x: number; y: number; rotateY: number; scale: number; opacity: number; blur: number; brightness: number; zIndex: number };
 
+/** offset 0 = front card (left). offset > 0 = older sessions stacked straight back. offset < 0 = already passed: tucked behind. */
 function poseFor(offset: number): Pose {
-  const abs = Math.abs(offset);
-  const sign = Math.sign(offset);
-  if (abs === 0) return { x: 0, rotateY: 0, scale: 1, opacity: 1, blur: 0, brightness: 1, zIndex: 30 };
-  if (abs === 1) return { x: sign * 168, rotateY: -sign * 28, scale: 0.84, opacity: 0.5, blur: 3.5, brightness: 0.78, zIndex: 20 };
-  if (abs === 2) return { x: sign * 272, rotateY: -sign * 34, scale: 0.7, opacity: 0.14, blur: 9, brightness: 0.6, zIndex: 10 };
-  return { x: sign * 330, rotateY: -sign * 38, scale: 0.6, opacity: 0, blur: 12, brightness: 0.5, zIndex: 0 };
+  if (offset === 0) return { x: 0, y: 0, rotateY: 0, scale: 1, opacity: 1, blur: 0, brightness: 1, zIndex: 30 };
+  if (offset < 0) return { x: 0, y: 0, rotateY: 14, scale: 0.88, opacity: 0, blur: 10, brightness: 0.5, zIndex: 5 };
+  const k = Math.min(offset, 4);
+  const depth = [0, { s: 0.93, o: 0.85, b: 0.8, br: 0.85 }, { s: 0.86, o: 0.55, b: 2.2, br: 0.72 }, { s: 0.8, o: 0.3, b: 4, br: 0.6 }, { s: 0.74, o: 0, b: 9, br: 0.5 }][k] as { s: number; o: number; b: number; br: number };
+  return { x: k * 24, y: -k * 12, rotateY: -6, scale: depth.s, opacity: depth.o, blur: depth.b, brightness: depth.br, zIndex: 30 - k * 5 };
 }
 
 /** Small ring like the "Mindful" gauge in the inspiration. */
@@ -129,11 +137,14 @@ function ChatCard({ chat, maxCount, focused }: { chat: Chat; maxCount: number; f
 
 export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
   const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const n = chats.length;
   const current = chats[Math.min(index, n - 1)];
   const maxCount = useMemo(() => chats.reduce((m, c) => Math.max(m, c.message_count), 0), [chats]);
+  const totals = useMemo(
+    () => ({ texts: chats.reduce((t, c) => t + c.message_count, 0), models: new Set(chats.map((c) => prettyModel(c.model))).size }),
+    [chats],
+  );
 
   // Focus a specific chat when asked (e.g. right after a new execution).
   useEffect(() => {
@@ -147,12 +158,6 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
   }, [n, index]);
 
   const go = useCallback((d: number) => setIndex((i) => (n ? (i + d + n) % n : 0)), [n]);
-
-  useEffect(() => {
-    if (!playing || n < 2) return;
-    const t = setInterval(() => go(1), 2600);
-    return () => clearInterval(t);
-  }, [playing, n, go]);
 
   const onDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.x < -50 || info.velocity.x < -400) go(1);
@@ -177,89 +182,107 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
         <span className="chip bg-black/20 text-white/80">{n} sessions</span>
       </div>
 
-      {/* Stage */}
-      <motion.div
-        className="relative mx-auto mt-6 h-[320px] w-full cursor-grab touch-pan-y overflow-hidden active:cursor-grabbing"
-        style={{ perspective: 1100 }}
-        drag={n > 1 ? "x" : false}
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.12}
-        onDragEnd={onDragEnd}
-      >
-        {n === 0 ? (
-          <div className="absolute left-1/2 top-1 w-[244px] -translate-x-1/2">
-            <div className="energy-card flex h-[304px] flex-col items-center justify-center rounded-[30px] p-6 text-center text-white">
-              <Sparkles className="h-9 w-9 text-white/80" />
-              <div className="mt-4 text-[18px] font-semibold">No sessions yet</div>
-              <div className="mt-1 text-[13px] text-white/65">Ask Gemini below to start your archive</div>
+      <div className="mt-5 grid flex-1 content-start gap-5 px-5 sm:px-7 md:max-lg:grid-cols-[272px_minmax(0,1fr)] xl:grid-cols-[272px_minmax(0,1fr)]">
+        {/* Stage: front card on the left, older sessions stacked straight back */}
+        <motion.div
+          className="relative h-[330px] w-[272px] cursor-grab touch-pan-y active:cursor-grabbing"
+          style={{ perspective: 1100 }}
+          drag={n > 1 ? "x" : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.12}
+          onDragEnd={onDragEnd}
+        >
+          {n === 0 ? (
+            <div className="absolute left-0 top-1 w-[244px]">
+              <div className="energy-card flex h-[304px] flex-col items-center justify-center rounded-[30px] p-6 text-center text-white">
+                <Sparkles className="h-9 w-9 text-white/80" />
+                <div className="mt-4 text-[18px] font-semibold">No sessions yet</div>
+                <div className="mt-1 text-[13px] text-white/65">Ask Gemini below to start your archive</div>
+              </div>
             </div>
-          </div>
-        ) : (
-          chats.map((chat, i) => {
-            let offset = i - index;
-            if (n > 4) {
-              // shortest way round so the loop feels continuous
-              if (offset > n / 2) offset -= n;
-              if (offset < -n / 2) offset += n;
-            }
-            if (Math.abs(offset) > 3) return null;
-            const p = poseFor(offset);
-            const isCenter = offset === 0;
-            return (
-              <motion.button
-                type="button"
-                key={chat.id}
-                data-testid="coverflow-card"
-                className="absolute left-1/2 top-1 w-[244px] text-left"
-                style={{ zIndex: p.zIndex, marginLeft: -122, pointerEvents: p.opacity < 0.1 ? "none" : "auto" }}
-                initial={false}
-                animate={{
-                  x: p.x,
-                  rotateY: p.rotateY,
-                  scale: p.scale,
-                  opacity: p.opacity,
-                  filter: `blur(${p.blur}px) brightness(${p.brightness})`,
-                }}
-                transition={{ type: "spring", stiffness: 210, damping: 28 }}
-                onClick={() => !isCenter && setIndex(i)}
-                aria-current={isCenter}
-                tabIndex={isCenter ? 0 : -1}
-                aria-label={`${chat.title}, ${textsLabel(chat.message_count)}`}
-              >
-                <ChatCard chat={chat} maxCount={maxCount} focused={isCenter} />
-              </motion.button>
-            );
-          })
-        )}
-      </motion.div>
+          ) : (
+            chats.map((chat, i) => {
+              const offset = i - index;
+              if (offset > 4 || offset < -1) return null;
+              const p = poseFor(offset);
+              const isCenter = offset === 0;
+              return (
+                <motion.button
+                  type="button"
+                  key={chat.id}
+                  data-testid="coverflow-card"
+                  className="absolute left-0 top-3 w-[244px] text-left"
+                  style={{ zIndex: p.zIndex, transformOrigin: "left center", pointerEvents: p.opacity < 0.1 ? "none" : "auto" }}
+                  initial={false}
+                  animate={{
+                    x: p.x,
+                    y: p.y,
+                    rotateY: p.rotateY,
+                    scale: p.scale,
+                    opacity: p.opacity,
+                    filter: `blur(${p.blur}px) brightness(${p.brightness})`,
+                  }}
+                  transition={{ type: "spring", stiffness: 210, damping: 28 }}
+                  onClick={() => !isCenter && setIndex(i)}
+                  aria-current={isCenter}
+                  tabIndex={isCenter ? 0 : -1}
+                  aria-label={`${chat.title}, ${textsLabel(chat.message_count)}`}
+                >
+                  <ChatCard chat={chat} maxCount={maxCount} focused={isCenter} />
+                </motion.button>
+              );
+            })
+          )}
+        </motion.div>
+
+        {/* Summary of the selected session */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={current?.id ?? "none"}
+            initial={{ opacity: 0, x: 14 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+            className="min-w-0"
+          >
+            <SessionSummary chat={current} count={n} totals={totals} />
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       {/* Control bar */}
-      <div className="liquid-glass mx-3 mb-3 mt-auto flex items-center gap-2 rounded-full px-3 py-2 sm:mx-5 sm:gap-3 sm:px-4">
+      <div className="liquid-glass mx-3 mb-4 mt-5 flex items-center gap-2 rounded-[28px] px-3 py-2 sm:mx-5 sm:gap-3 sm:px-4">
         <div className="flex items-center gap-0.5 text-white">
           <CtrlBtn label="Previous session" onClick={() => go(-1)} disabled={n < 2}>
             <Rewind className="h-5 w-5" fill="currentColor" />
           </CtrlBtn>
-          <CtrlBtn label={playing ? "Pause autoplay" : "Autoplay"} onClick={() => setPlaying((p) => !p)} disabled={n < 2}>
-            {playing ? <Pause className="h-5 w-5" fill="currentColor" /> : <Play className="h-5 w-5" fill="currentColor" />}
-          </CtrlBtn>
-          <CtrlBtn label="Next session" onClick={() => go(1)} disabled={n < 2}>
+          <CtrlBtn label="Next (older) session" onClick={() => go(1)} disabled={n < 2}>
             <FastForward className="h-5 w-5" fill="currentColor" />
           </CtrlBtn>
         </div>
 
-        {/* now-playing pill */}
+        {/* details of the selected session */}
         <div className="relative min-w-0 flex-1">
           <div className="flex items-center gap-3 overflow-hidden rounded-2xl bg-ink-950/70 p-1.5 pr-2 ring-1 ring-white/10">
-            <div className="energy-card grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[12px] font-semibold text-white">
+            <div className="energy-card grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[13px] font-semibold text-white" title="Texts exchanged">
               {current ? current.message_count : "–"}
             </div>
             <div className="min-w-0 flex-1">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div key={current?.id ?? "none"} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>
                   <div className="truncate text-[13px] font-medium text-white">{current?.title ?? "Nothing here yet"}</div>
-                  <div className="truncate text-[11px] text-white/55">
-                    {current ? `${textsLabel(current.message_count)} · active ${timeAgo(current.updated_at)}` : "Metadata only"}
-                  </div>
+                  {current ? (
+                    <>
+                      <div className="truncate text-[11px] text-white/65">
+                        {when(current.created_at).date} · {textsLabel(current.message_count)} exchanged · {daysAgo(current.updated_at)}
+                      </div>
+                      <div className="truncate text-[11px] text-white/45">
+                        {providerOf(current.model)} · {prettyModel(current.model)}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="truncate text-[11px] text-white/55">Ask Gemini below to start</div>
+                  )}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -303,14 +326,69 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
           </AnimatePresence>
         </div>
 
-        <div className="hidden items-center gap-1 text-white sm:flex">
-          <span className="grid h-9 w-9 place-items-center" title="Zero data retention: only when and how much, never what">
-            <ShieldCheck className="h-5 w-5" />
-          </span>
-          <span className="min-w-[40px] text-center text-xs tabular-nums text-white/75">{n ? `${index + 1}/${n}` : "0/0"}</span>
-        </div>
+        <span className="hidden min-w-[40px] text-center text-xs tabular-nums text-white/75 sm:block">{n ? `${index + 1}/${n}` : "0/0"}</span>
       </div>
-      <p className="pb-4 text-center text-[11px] text-white/60">Metadata only · zero data retention</p>
+    </div>
+  );
+}
+
+function Stat({ icon: Icon, label, value, sub }: { icon: typeof Clock; label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-2xl bg-black/20 p-3">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-white/50">
+        <Icon className="h-3.5 w-3.5" /> {label}
+      </div>
+      <div className="mt-1 truncate text-[15px] font-semibold text-white">{value}</div>
+      {sub && <div className="truncate text-[12px] text-white/55">{sub}</div>}
+    </div>
+  );
+}
+
+/** Metadata-only summary of one session: what exists about it, never what was said. */
+function SessionSummary({ chat, count, totals }: { chat?: Chat; count: number; totals: { texts: number; models: number } }) {
+  if (!chat) {
+    return (
+      <div className="rounded-3xl bg-black/20 p-5 text-sm text-white/65">
+        <p className="font-semibold text-white">Session summary</p>
+        <p className="mt-1">Once you chat, each session&apos;s summary appears here.</p>
+      </div>
+    );
+  }
+  const w = when(chat.created_at);
+  return (
+    <div>
+      <p className="eyebrow">Session summary</p>
+      <h3 className="mt-1 line-clamp-2 text-xl font-semibold leading-snug text-white">{chat.title}</h3>
+      <div className="mt-4 grid grid-cols-2 gap-2.5">
+        <Stat icon={CalendarDays} label="Started" value={w.date} sub={`${w.clock} ${w.meridiem}`} />
+        <Stat icon={Clock} label="Last active" value={daysAgo(chat.updated_at)} sub={timeAgo(chat.updated_at)} />
+        <Stat icon={MessagesSquare} label="Texts exchanged" value={String(chat.message_count)} sub={chat.message_count > 2 ? "multi-turn conversation" : "single exchange"} />
+        <Stat icon={Cpu} label="LLM" value={providerOf(chat.model)} sub={prettyModel(chat.model)} />
+      </div>
+
+      <div className="mt-2.5 rounded-2xl bg-black/20 p-3">
+        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-white/50">
+          <Layers className="h-3.5 w-3.5" /> Memory used
+        </div>
+        <p className="mt-1 text-[14px] text-white">{chat.card_label ? `Context card: ${chat.card_label}` : "No context card attached"}</p>
+        {chat.tags.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {chat.tags.map((t) => (
+              <span key={t} className="chip bg-white/10 text-white/85">
+                <Tag className="h-3 w-3" /> {t}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl bg-black/20 px-3 py-2.5 text-[12px] text-white/70">
+        <span className="flex items-center gap-1.5"><Gauge className="h-3.5 w-3.5" /> Last turn: {chat.prompt_tokens != null ? `${chat.prompt_tokens} → ${chat.output_tokens ?? 0} tokens` : "n/a"}</span>
+        <span>{chat.latency_ms != null ? `${(chat.latency_ms / 1000).toFixed(1)} s` : ""}</span>
+      </div>
+      <p className="mt-3 text-[12px] text-white/50">
+        All {count} sessions: {totals.texts} texts across {totals.models} {totals.models === 1 ? "model" : "models"}. The wording of a chat is never stored, only these details.
+      </p>
     </div>
   );
 }

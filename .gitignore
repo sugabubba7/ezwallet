@@ -30,3 +30,7 @@ out/
 reports/dev-*
 traces/dev-*
 tracker/.venv/
+traces/scratch/
+traces/*.out
+traces/*.pid
+reports/latest.md

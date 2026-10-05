@@ -9,6 +9,7 @@ from .errors import (
     BadRequest,
     DailyQuotaExhausted,
     PaymentRequired,
+    RequestTooLarge,
     RateLimited,
     TerminalError,
     TransientError,
@@ -69,6 +70,9 @@ def raise_for_service(service: str, resp: httpx.Response) -> None:
         raise RateLimited(f"{service}: rate limited ({why})", retry_after=_retry_after(resp, body))
     if code in (432, 433):  # Tavily: plan / pay-as-you-go limit exceeded
         raise DailyQuotaExhausted(f"{service}: plan usage limit exceeded ({why}).")
+    if code == 413:
+        m = re.search(r"Limit (\d+), Requested (\d+)", body)
+        raise RequestTooLarge(f"{service}: request too large ({why})", int(m.group(1)) if m else None, int(m.group(2)) if m else None)
     if code == 402:
         raise PaymentRequired(f"{service}: payment required ({why}).")
     if code in (401, 403) or (code == 400 and ("api key not valid" in low or "api_key_invalid" in low)):

@@ -1,6 +1,6 @@
 # AGENT.md: how this tracker actually works
 
-System: [tracker/](tracker/) (about 2,000 lines of Python, no agent framework), policy in [config.yaml](config.yaml), memory in the EZ Wallet backend. Numbers below were measured from traces of this system on 2026-10-04 (development runs against a local backend). Regenerate them for the graded runs with `python -m tracker.trace_stats traces/run1.jsonl`.
+System: [tracker/](tracker/) (about 2,000 lines of Python, no agent framework), policy in [config.yaml](config.yaml), memory in the EZ Wallet backend. Numbers in sections 2 and 5 were measured from this system's own traces: the graded run 1 (`traces/run1.jsonl`, 2026-10-05, deployed backend, `qwen/qwen3.8-27b:free` via OpenRouter) and, where stated, from development runs on Groq's free tier. Regenerate any of them with `python -m tracker.trace_stats traces/run1.jsonl`.
 
 ## 1. Workflow vs. agent
 
@@ -22,17 +22,17 @@ System: [tracker/](tracker/) (about 2,000 lines of Python, no agent framework), 
 
 ## 2. The network
 
-Trace of a complete development run (`qwen/qwen3.8-27b`, 6 model steps, from `python -m tracker.trace_stats`):
+Graded run 1 (`traces/run1.jsonl`): 6 steps, 6 articles fetched, a complete top 5. From `python -m tracker.trace_stats traces/run1.jsonl`:
 
 | Service | Round trips | Time | What |
 |---|---|---|---|
-| Groq (model) | 6 | 10.1 s | one per step |
-| Tavily (search) | 4 | 11.3 s | 2 searches in step 1, 2 more in step 2 (4 credits) |
-| The open web (`fetch_article`) | 4 | 1.7 s | 3 pages fetched, 1 returned HTTP 404 |
-| EZ Wallet backend | 6 | 0.2 s | health, login, load state, start run, save run, attach report |
-| **Total** | **20** | **224 s wall clock** | |
+| OpenRouter (model) | 6 | 54.2 s | steps 1 to 4 gather evidence, steps 5 and 6 write the report (see below) |
+| Tavily (search) | 4 | 11.7 s | 2 searches in step 1, 2 in step 2 (4 credits) |
+| The open web (`fetch_article`) | 6 | 5.3 s | 4 pages fetched in parallel in step 3, 2 more in step 4 |
+| EZ Wallet backend (Render) | 6 | 5.5 s | health, login, load state, start run, save run, attach report |
+| **Total** | **22** | **100 s wall clock** | |
 
-**Where the time went:** 201 of the 224 seconds were the agent asleep in backoff, waiting out Groq's free-tier limit of **8,000 tokens per minute**. Actual work (model + search + fetch + backend) was about 23 seconds. The 6 steps had to be spread over about 4 minutes because each prompt was 3-5k tokens. The tracker is slow because of the quota, not the network.
+**Where the time went:** the model, again. Of the 100 s, 23 s was the agent asleep in backoff after OpenRouter's free upstream answered 429 three times (5.5 s, 12.1 s and 5.6 s waits, all in the trace), and about 54 s was the model itself. Search, fetching and the backend together were about 22 s. Two of the six model calls were `finish`: the first (step 5, 2,703 output tokens) was **rejected by my validator** because the summary of development 2 stated "2026", which does not appear in its cited source; the second (step 6) fixed it and was accepted. That one retry is the provenance check doing its job, and it cost about 35 s. On my earlier development runs against Groq's free tier the picture was the opposite: one run spent 201 of 224 seconds asleep waiting out Groq's 8,000 tokens-per-minute limit. The tracker is bound by whichever quota or model is slowest, which is why waiting is logged as its own `retry` lines.
 
 ## 3. "New"
 
@@ -84,17 +84,20 @@ and the retry loop in `tracker/retry.py` treats the two classes differently:
 - **Per-minute limit** (`RateLimited`, a `TransientError`): the server's `Retry-After` (or Gemini's `retryDelay`) is honored, otherwise exponential backoff (2 s, 4 s, 8 s, capped at 30 s, plus jitter), at most **3 retries**. If the server asks for more than 90 s, or the retries run out, the run stops with exit code 3 and says why. Every retry is a line in the trace.
 - **Daily cap** (`DailyQuotaExhausted`, a `TerminalError`): **no retry, ever.** The run stops at once, saves what it has, prints `daily quota exhausted ... try again tomorrow`, and exits with code 2.
 
-This was exercised for real, not only in tests. On 2026-10-04 my development runs used up Groq's 200,000 tokens/day for the model, and the next request came back `tokens per day (TPD): Limit 200000, Used 199066`. The tracker made exactly one call, did not retry, wrote a report marked failed and returned exit code 2 (see `Outcome` in `tracker/agent.py`). The same file's tests cover a bad key (`AuthError`), 402 (`PaymentRequired`), Tavily's 432 plan limit and the network cut (3 retries, then give up).
+A third case is the provider saying the prompt itself is too large (Groq's `413`, "Limit 7000, Requested 7295"). That is neither transient nor a bad key, so it has its own class: the agent reads the real size from the error, recalibrates its characters-per-token estimate, shortens the oldest article text and earlier failed report attempts, and retries up to twice before giving up. In graded run 1 the one 429 on OpenRouter's free model (`Provider returned error`) shows up in the trace as `attempt 1 failed (openrouter: rate limited ...); sleeping 5.1s`, then succeeded.
+
+This was exercised for real, not only in tests. On 2026-10-04 and again on 2026-10-05 my development runs used up Groq's 200,000 tokens/day for the model, and the next request came back `tokens per day (TPD): Limit 200000, Used 199066`. The tracker made exactly one call, did not retry, wrote a report marked failed and returned exit code 2 (see `Outcome` in `tracker/agent.py`). The same file's tests cover a bad key (`AuthError`), 402 (`PaymentRequired`), Tavily's 432 plan limit and the network cut (3 retries, then give up).
 
 ## 5. Budget
 
-**One run** (measured across development runs): 18k to 31k tokens with `qwen/qwen3.8-27b` (typically about 27k; `gpt-oss-120b` needed 42k to 76k because it made one tool call per step), 2 to 4 Tavily credits (one per search), 3 to 8 page fetches (free), and 4 to 16 model calls. At the nominal prices in `config.yaml` that is about **$0.005 per run**, but both free tiers bill nothing. Hard caps per run: 16 steps, 8 fetches, 4 searches, 90,000 tokens, $0.25 (nominal), 900 s.
+**One run** (graded run 1): 40,155 tokens (33,958 in, 6,197 out) across 6 model calls, 4 Tavily credits (one per search), 6 page fetches (free). At the nominal prices in `config.yaml` that is **about $0.009**, but every tier I used bills nothing. Hard caps per run: 16 steps, 8 fetches, 4 searches, 150,000 tokens, $0.25 (nominal), 900 s. Earlier runs on Groq needed 18k to 45k tokens, because the 8,000-token-per-minute quota forced very small article excerpts and more steps.
 
 **If I ran it daily:**
 
-| Free tier | Limit | One daily run uses | Runs out |
+| Free tier | Limit | One run uses | Runs out |
 |---|---|---|---|
-| Groq (`qwen/qwen3.8-27b` or `gpt-oss-120b`) | 200,000 tokens/day per model, 8,000/min | about 27k (about 14%) | never at one run a day. At about 7 runs a day, the same day |
-| Tavily | 1,000 credits/month | 2-4 credits (at most 12% of the month at 30 runs) | never at one run a day. At about 250 runs a month |
+| OpenRouter `:free` models | 20 requests/min, **50 requests/day** until $10 of credits has ever been bought, then 1,000/day ([docs](https://openrouter.ai/docs/api-reference/limits)) | 4 to 16 requests (6 in run 1, plus 3 retried 429s) | never at one run a day; at about 3 to 12 runs a day, the same day |
+| Tavily | 1,000 credits/month ([docs](https://docs.tavily.com/documentation/api-credits)) | 2 to 4 credits (4 in run 1) | never at one run a day (about 120 of 1,000 at 30 runs); at about 250 runs a month |
+| Groq (used during development) | 200,000 tokens/day **per model**, 8,000/min ([docs](https://console.groq.com/docs/rate-limits)) | about 18k to 45k | never at one run a day; at about 5 to 10 runs a day |
 
-So with a daily run, **neither runs out**. If I run it more often, **Groq's daily token cap is the first to go**, and not after weeks but within a single day: during development, repeated runs on 2026-10-04 (day 1) exhausted the 200,000-token pool of `qwen/qwen3.8-27b` before the day was over, which is how I tested the daily-cap path. (The cap is per model, and it resets daily.) The binding limit in practice is the per-minute cap (8,000 tokens), which sets how fast a run can go, not how many runs I get. Sources: [Groq rate limits](https://console.groq.com/docs/rate-limits), [Tavily credits](https://docs.tavily.com/documentation/api-credits).
+So with one run a day, **no tier runs out**. If I ran it more often, the first limit to bind is a daily one, and it comes within hours, not weeks. I know because I hit it: on 2026-10-05 my repeated tuning runs exhausted the Groq pools of both `qwen/qwen3.8-27b` (198,685 of 200,000 tokens) and `openai/gpt-oss-120b` (198,550) before 10 AM. The tracker treated both as daily caps: no retry, one clear message, the run saved as partial. That is why the graded runs moved to OpenRouter. The binding limit on OpenRouter is the 50 requests a day, so about 3 runs of 16 steps; in practice a daily run uses 6 to 10 of those.

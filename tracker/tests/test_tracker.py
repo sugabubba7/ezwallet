@@ -447,3 +447,62 @@ def test_headline_is_not_accepted_as_a_quote():
     ag, _ = make_agent([[("fetch_article", {"url": PAGE["url"]})], [finish_call(PAGE["url"], "T" * 45)]], pages={PAGE["url"]: PAGE})
     ag.run()
     assert ag.final is None
+
+
+def test_413_shrinks_the_prompt_and_retries_instead_of_failing():
+    from tracker.errors import RequestTooLarge
+    sizes = []
+
+    class Picky:
+        def generate(self, system, history, decls, allowed):
+            n = len(json.dumps(history, default=str))
+            sizes.append(n)
+            if n > 3000:
+                raise RequestTooLarge("groq: request too large", limit=1000, requested=2000)
+            return LlmResult(calls=[("finish", {"report": {"developments": []}})], call_ids=["c0"], prompt_tokens=300, output_tokens=10)
+    ag = Agent(cfg, Picky(), FakeStore(), Tracer(None), sleep=lambda s: None)
+    big = {"status": "fetched", "content": wrap_untrusted("u", "x" * 6000), "title": "t"}
+    ag.history = [{"role": "user", "text": "go"}, {"role": "tool", "results": [{"id": "1", "name": "fetch_article", "response": big}]},
+                  {"role": "user", "text": "next"}]
+    ag._model_turn(["finish"])
+    assert len(sizes) == 2 and sizes[1] < sizes[0] and ag.cap_tokens == 800  # shrank once, then succeeded
+
+
+def test_second_finish_attempt_keeps_supported_developments_and_drops_the_rest():
+    good = {"rank": 1, "title": "Acme launches Vault", "summary": "Acme launched Vault.", "sources": [{"url": PAGE["url"], "quote": "Acme today launched Vault, a private memory store for AI chats."}]}
+    bad = {"rank": 2, "title": "Made up", "summary": "Invented.", "sources": [{"url": PAGE["url"], "quote": "This sentence is nowhere in the article at all."}]}
+    ag, store = make_agent([[("fetch_article", {"url": PAGE["url"]})], [("finish", {"report": {"developments": [good, bad]}})],
+                            [("finish", {"report": {"developments": [good, bad]}})]], pages={PAGE["url"]: PAGE})
+    out = ag.run()
+    assert out.status == "complete" and ag.finish_failures == 1          # strict the first time, forgiving the second
+    assert [d["title"] for d in store.saved["developments"]] == ["Acme launches Vault"]
+    assert store.saved["stats"]["dropped_unsupported"]                  # and it says what it dropped
+
+
+def test_last_resort_digest_when_nothing_else_fits_and_top_level_developments_accepted():
+    from dataclasses import replace
+    c = replace(cfg, limits=replace(cfg.limits, max_request_tokens=2200))
+    ag = Agent(c, None, FakeStore(), Tracer(None))
+    ag.fetched = {"https://a.example/": {**PAGE, "_shown": "Acme today launched Vault, a private memory store."}}
+    ag.history = [{"role": "user", "text": "go"}] + [
+        {"role": "model", "raw": None, "text": "x" * 4000, "calls": [("c", "search_web", {"query": "q" * 3000})]},
+        {"role": "tool", "results": [{"id": "c", "name": "search_web", "response": {"results": [{"title": "t" * 3000}]}}]}] * 3
+    view = ag._view()
+    assert any("EARLIER STEPS WERE SHORTENED" in str(h.get("text")) and "Acme today launched Vault" in h["text"] for h in view)
+    assert len(view) < len(ag.history)
+    # top-level `developments` (no `report` wrapper) is understood
+    ag2, store = make_agent([[("fetch_article", {"url": PAGE["url"]})],
+                             [("finish", {"developments": [{"rank": 1, "title": "Acme", "summary": "Acme launched Vault.",
+                                                            "sources": [{"url": PAGE["url"], "quote": "Acme today launched Vault, a private memory store for AI chats."}]}]})]],
+                            pages={PAGE["url"]: PAGE})
+    assert ag2.run().status == "complete"
+
+
+def test_tool_call_is_recovered_from_a_provider_parse_failure():
+    from tracker.llm import _recover_call
+    wrapped = '{"name": "commentary", "arguments": {"report": {"developments": [{"rank": 1}]}}}'
+    assert _recover_call(wrapped, ["search_web", "fetch_article", "finish"]) == ("finish", {"report": {"developments": [{"rank": 1}]}})
+    assert _recover_call('{"report": {"developments": []}}', ["finish"])[0] == "finish"
+    assert _recover_call('{"query": "x"}', ["search_web", "finish"]) == ("search_web", {"query": "x"})
+    assert _recover_call("not json at all", ["finish"]) is None
+    assert _recover_call('{"url": "http://x"}', ["finish"]) is None   # a fetch is not allowed in this turn

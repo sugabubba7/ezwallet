@@ -14,10 +14,10 @@ from datetime import date, datetime, timezone
 
 from .config import Config
 from .dedupe import canonical_url
-from .errors import ArticleError, GuardError, RetriesExhausted, TerminalError, TrackerError, TransientError
+from .errors import ArticleError, GuardError, RequestTooLarge, RetriesExhausted, TerminalError, TrackerError, TransientError
 from .extract import excerpt
 from .fetcher import fetch_article as default_fetch
-from .finish import Dev, Known, validate
+from .finish import Dev, Known, validate, validate_salvage
 from .llm import LlmResult
 from .report import render
 from .retry import call_with_retries
@@ -75,8 +75,11 @@ class Agent:
         self.strikes = 0
         self.bad_turns = 0
         self._strike_step = -1
+        self._asked_for_more = False
+        self.dropped_notes: list[str] = []
         self.chars_per_token = 3.0  # recalibrated from the provider's real prompt-token counts after every call
         self._sent_chars = 0
+        self.cap_tokens: int | None = None  # tightened when the provider reports its real per-request limit
         self.fetch_infra_failures = 0
         self.final: list[Dev] | None = None
         self.final_notes = ""
@@ -265,6 +268,7 @@ class Agent:
         self._record(url, r["canonical_url"], "fetched", r["title"], None, r["content_hash"])
         injected = bool(_INJECTION.search(text) or _INJECTION.search(r["title"]))
         shown = excerpt(text, self.cfg.limits.max_article_chars, self.cfg.relevance_keywords)
+        r["_shown"] = shown
         out = {"status": "fetched", "url": r["final_url"], "title": wrap_untrusted("page_title", r["title"]), "published": r["published"],
                "note": "opening excerpt; fetching this URL again returns the same excerpt", "content": wrap_untrusted(r["final_url"], shown)}
         if injected:
@@ -275,13 +279,28 @@ class Agent:
     def _tool_finish(self, args: dict) -> dict:
         t0 = self.clock()
         L = self.cfg
-        devs, errors = validate(args.get("report"), k=L.k, known=self.known, fetched=self.fetched,
-                                auto_merge=L.dedupe_auto_merge, min_trust=L.dedupe_min_merge)
+        if "report" not in args and "developments" in args:  # a common slip: developments passed at the top level
+            args = {"report": {"developments": args["developments"], "notes": args.get("notes", "")}}
+        elif isinstance(args.get("report"), list):
+            args = {"report": {"developments": args["report"]}}
+        check = validate if self.finish_failures == 0 else validate_salvage  # first try is strict; later tries keep what is supported
+        devs, errors = check(args.get("report"), k=L.k, known=self.known, fetched=self.fetched,
+                             auto_merge=L.dedupe_auto_merge, min_trust=L.dedupe_min_merge)
+        if check is validate_salvage and devs:
+            self.dropped_notes = errors
+            errors = []
         if errors:
             self.finish_failures += 1
-            self._trace_tool("finish", {"n_developments": len(args.get("report", {}).get("developments", [])) if isinstance(args.get("report"), dict) else None},
+            self._trace_tool("finish", {"n_developments": len(args.get("report", {}).get("developments", [])) if isinstance(args.get("report"), dict) and isinstance(args["report"].get("developments"), list) else None, "arg_keys": sorted(args)[:6]},
                              "rejected", t0, "; ".join(errors)[:600])
             return self._envelope({"status": "rejected", "errors": errors, "instruction": "Fix these problems and call finish again."})
+        distinct = len({id(v) for v in self.fetched.values()})
+        if len(devs) < min(L.k, distinct) and not self._asked_for_more and self.remaining()["steps"] > 0:
+            self._asked_for_more = True  # push back once; the model may still insist on fewer on its next attempt
+            msg = (f"You reported {len(devs)} development(s) but fetched {distinct} articles and K={L.k}. Report {min(L.k, distinct)}: "
+                   "include other substantial, specific findings from the fetched articles (cite each with its own verbatim quote).")
+            self._trace_tool("finish", {"n_developments": len(devs)}, "rejected", t0, msg)
+            return self._envelope({"status": "rejected", "errors": [msg], "instruction": "Call finish again with more developments."})
         self.final = devs
         rep = args.get("report")
         self.final_notes = str(rep.get("notes", ""))[:500] if isinstance(rep, dict) else ""
@@ -318,15 +337,16 @@ class Agent:
         return self._fit(out)
 
     def _fit(self, view: list[dict]) -> list[dict]:
-        """Keep the request under the provider's per-request token cap by shortening the OLDEST article texts first.
+        """Keep the request under the provider's per-request token cap by shortening the OLDEST material first:
+        article texts, then the bodies of earlier rejected finish attempts, then article texts entirely.
         (Characters per token is measured from the provider's own prompt-token counts, with a 5% margin.)"""
-        cap = self.cfg.limits.max_request_tokens
+        cap = self.cap_tokens or self.cfg.limits.max_request_tokens
         if not cap:
             return view
         size = lambda: (len(json.dumps(view, default=str)) + len(self._system())) / self.chars_per_token * 1.05  # noqa: E731
-        for keep in (500, 250, 120):
-            if size() <= cap:
-                break
+        last_tool = max((i for i, h in enumerate(view) if h["role"] == "tool"), default=-1)
+
+        def shorten_articles(keep: int) -> None:
             for i, h in enumerate(view):
                 if h["role"] != "tool" or size() <= cap:
                     continue
@@ -339,6 +359,28 @@ class Agent:
                         resp = {**resp, "content": f"{head}\n{body[len(head):len(head) + keep]}\n[older article text shortened to fit the request size limit]\n{TAG_CLOSE}"}
                     new.append({**r, "response": resp})
                 view[i] = {**h, "results": new}
+
+        for keep in (500, 250, 120):
+            if size() <= cap:
+                return view
+            shorten_articles(keep)
+        # earlier finish attempts (long JSON the model wrote, plus the validator's complaints) are no longer needed
+        for i, h in enumerate(view):
+            if size() <= cap:
+                return view
+            if h["role"] == "model" and i < len(view) - 2:
+                view[i] = {**h, "calls": [(cid, n, {"report": "(earlier attempt omitted)"} if n == "finish" else a) for cid, n, a in h["calls"]]}
+            if h["role"] == "tool" and i < last_tool:
+                view[i] = {**h, "results": [{**r, "response": ({"status": "rejected", "errors": ["(omitted)"]} if r["name"] == "finish" else r["response"])} for r in h["results"]]}
+        shorten_articles(0)
+        if size() > cap:  # last resort: replace the middle of the conversation with a compact, quotable digest
+            digest = "\n".join(f"- {v['title'][:70]} | {v['final_url'][:100]}\n  {v.get('_shown', '')[:260]!r}"
+                               for v in {id(v): v for v in self.fetched.values()}.values())
+            head = view[:1]
+            tail = view[-2:] if len(view) > 3 else []
+            note = {"role": "user", "text": "EARLIER STEPS WERE SHORTENED to fit the request size limit. Articles fetched so far, each with its opening "
+                                            "excerpt (quote only from these excerpts):\n" + wrap_untrusted("digest", digest)}
+            view = head + [note] + tail
         return view
 
     def _model_turn(self, allowed: list[str], counts_as_step: bool = True) -> bool:
@@ -348,10 +390,21 @@ class Agent:
         t0 = self.clock()
         decls = [DECLARATIONS[n] for n in allowed]
         try:
-            view = self._view()
-            self._sent_chars = len(json.dumps(view, default=str)) + len(self._system())
-            res = call_with_retries(lambda: self.llm.generate(self._system(), view, decls, allowed), self.cfg.retry,
-                                    label=self.cfg.provider, on_retry=self._on_retry(self.cfg.provider), sleep=self.sleep)
+            for shrink_try in range(3):
+                view = self._view()
+                self._sent_chars = len(json.dumps(view, default=str)) + len(self._system())
+                try:
+                    res = call_with_retries(lambda: self.llm.generate(self._system(), view, decls, allowed), self.cfg.retry,
+                                            label=self.cfg.provider, on_retry=self._on_retry(self.cfg.provider), sleep=self.sleep)
+                    break
+                except RequestTooLarge as e:
+                    # The provider told us its real limit and our real size: recalibrate, shrink the prompt, try again.
+                    self.tracer.log(step=self.step, kind="retry", service=self.cfg.provider, tool="shrink_prompt", status="retry", latency_ms=0,
+                                    note=f"prompt too large ({e.requested} > {e.limit} tokens); shrinking and retrying")
+                    if shrink_try == 2 or not (e.limit and e.requested):
+                        raise
+                    self.chars_per_token = max(1.5, self._sent_chars / e.requested)
+                    self.cap_tokens = int(e.limit * 0.8)
         except TrackerError as e:
             self.tracer.log(step=self.step, kind="model", service=self.cfg.provider, tool="chat.completions" if self.cfg.provider != "gemini" else "generateContent", args={"model": self.cfg.model_name},
                             status="error", latency_ms=int((self.clock() - t0) * 1000), note=f"{type(e).__name__}: {e}")
@@ -368,7 +421,7 @@ class Agent:
                         status="ok", latency_ms=int((self.clock() - t0) * 1000), tokens_in=res.prompt_tokens, tokens_out=res.output_tokens,
                         note=f"calls={[c[0] for c in res.calls]} finish_reason={res.finish_reason}")
         if not res.calls:
-            if res.finish_reason == "tool_use_failed":  # a malformed call is not real progress: it does not use up a step
+            if res.finish_reason.startswith("tool_use_failed"):  # a malformed call is not real progress: it does not use up a step
                 self.bad_turns += 1
                 if counts_as_step:
                     self.step -= 1
@@ -461,7 +514,8 @@ class Agent:
         return {"steps": self.step, "fetches": self.fetches, "searches": self.searches, "prompt_tokens": self.prompt_tokens,
                 "output_tokens": self.output_tokens, "cost_usd": round(self.cost, 6), "tavily_credits": self.credits,
                 "retries": self.retries + self.store.retries, "wall_seconds": round(self.clock() - self.t0, 1),
-                "model": self.cfg.model_name, "budget_denials": sorted(set(self.denied)), "notes": self.final_notes}
+                "model": self.cfg.model_name, "budget_denials": sorted(set(self.denied)), "notes": self.final_notes,
+                "dropped_unsupported": self.dropped_notes[:6]}
 
     def _persist(self, stop_reason: str | None, report_path: str | None) -> Outcome:
         cfg = self.cfg

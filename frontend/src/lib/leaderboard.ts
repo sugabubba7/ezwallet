@@ -64,3 +64,36 @@ export const CAVEATS = [
   "Tokens processed per month measures inference traffic, not how much training data a model has seen. Training-set sizes are mostly undisclosed.",
   "Per-model token shares are visible only for traffic routed through OpenRouter's public rankings, which skews toward developers and coding agents.",
 ];
+
+export type Slice = { label: string; value: number; note: string };
+export type ChartSpec = { id: string; title: string; subtitle: string; unit: string; slices: Slice[]; footnote: string };
+
+const GOOGLE_TOTAL = LEADERBOARD[0].tokensPerMonthT as number;
+const GOOGLE_API = LEADERBOARD[1].tokensPerMonthT as number;
+const OPENAI_API = LEADERBOARD[2].tokensPerMonthT as number;
+
+/** Charts are computed from the rows above so the numbers can never disagree with the table. */
+export const CHARTS: ChartSpec[] = [
+  {
+    id: "api-share",
+    title: "Share of known API volume",
+    subtitle: "The one like-for-like comparison available: API traffic only",
+    unit: "T tokens / month",
+    slices: [
+      { label: "Google (Gemini API)", value: GOOGLE_API, note: "≈19B tokens/min, May 2026" },
+      { label: "OpenAI (API)", value: OPENAI_API, note: "≈15B tokens/min, Mar 2026" },
+    ],
+    footnote: "Anthropic and every other provider are missing because they publish no volume, so these shares are only between the two disclosed.",
+  },
+  {
+    id: "google-split",
+    title: "Inside Google's 3.2 quadrillion",
+    subtitle: "Where Google's headline number comes from",
+    unit: "T tokens / month",
+    slices: [
+      { label: "Gemini API (developers)", value: GOOGLE_API, note: "derived from the API rate" },
+      { label: "Search, Workspace, Android, other", value: GOOGLE_TOTAL - GOOGLE_API, note: "total minus the API" },
+    ],
+    footnote: "Most of Google's headline volume is its own products, not customers calling the API. That is why it cannot be compared with OpenAI's API-only figure.",
+  },
+];

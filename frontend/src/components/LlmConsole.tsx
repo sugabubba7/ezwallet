@@ -10,7 +10,7 @@
  * the session's metadata (title, tags, message count, timestamps).
  */
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUp, Check, Hash, Loader2, Lock, PenLine, Plus, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowUp, Check, Hash, Loader2, Lock, PenLine, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api, errMsg } from "@/lib/api";
 import { CARD_THEMES, CATEGORY_META } from "@/lib/cards";
@@ -115,12 +115,6 @@ export function LlmConsole({ llm, cards, selectedId, onSelect, onUnlockRequest, 
   return (
     <section aria-label="Ask Gemini">
       <div className="mb-3 flex flex-wrap items-center gap-2 px-1">
-        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-white">
-          <Sparkles className="h-4 w-4" /> Gemini ZDR proxy
-        </h2>
-        <span className="chip bg-black/20 text-white/85">
-          <ShieldCheck className="h-3.5 w-3.5" /> Prompts &amp; replies never stored
-        </span>
         {session && (
           <button onClick={newChat} className="chip ml-auto bg-white/15 text-white transition hover:bg-white/25">
             <Plus className="h-3.5 w-3.5" /> New chat
