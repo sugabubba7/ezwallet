@@ -2,16 +2,16 @@
 # and nothing fetched from the web can either.
 
 topic: "Competitors to EZ Wallet: products that store, encrypt or manage personal context/memory for AI chats (AI memory vaults, prompt-context managers, privacy-first LLM gateways). Track launches, pricing changes, funding, and security or privacy incidents."
-k: 5   # 3 <= k <= 10
+k: 5 # 3 <= k <= 10
 
 model:
-  provider: openrouter          # gemini | groq | openrouter | openai   (Groq's free tier caps requests at 7k tokens: see README)
-  name: nvidia/nemotron-3-super-120b-a12b:free   # qwen/qwen3.8-27b:free was withdrawn from OpenRouter's free tier on 2026-10-05
+  provider: openrouter # gemini | groq | openrouter | openai   (Groq's free tier caps requests at 7k tokens: see README)
+  name: nvidia/nemotron-3-super-120b-a12b:free # qwen/qwen3.8-27b:free was withdrawn from OpenRouter's free tier on 2026-10-05
   temperature: 0.2
-  max_output_tokens: 3000       # the final report is the longest reply (K developments with quotes)
+  max_output_tokens: 3000 # the final report is the longest reply (K developments with quotes)
   # reasoning_effort: low       # gpt-oss models only: keeps hidden reasoning tokens small
   # thinking_budget: 0         # only for 2.5-series models; Gemini 3.x manages thinking itself
-  price_per_million_input_usd: 0.15    # nominal paid-tier prices; the free tier bills $0 but we still track the figure
+  price_per_million_input_usd: 0.15 # nominal paid-tier prices; the free tier bills $0 but we still track the figure
   price_per_million_output_usd: 0.60
 
 instructions: |
@@ -50,26 +50,52 @@ instructions: |
   one of them, reuse its id in `existing_id` and attach the new URL as an additional source instead of
   creating a duplicate. Re-include earlier developments that are still among the K most important.
 
-relevance_keywords: [memory, context, privacy, private, encrypt, vault, launch, announce, release, pricing, price, funding, raises, raised,
-                     acquire, acquisition, breach, vulnerab, security, wallet, agent, personal, open-source, series, seed]
+relevance_keywords:
+  [
+    memory,
+    context,
+    privacy,
+    private,
+    encrypt,
+    vault,
+    launch,
+    announce,
+    release,
+    pricing,
+    price,
+    funding,
+    raises,
+    raised,
+    acquire,
+    acquisition,
+    breach,
+    vulnerab,
+    security,
+    wallet,
+    agent,
+    personal,
+    open-source,
+    series,
+    seed,
+  ]
 
 tools: [search_web, fetch_article, finish]
 
 limits:
-  max_steps: 16                  # model calls (the reserved final call is extra)
+  max_steps: 24 # model calls (the reserved final call is extra)
   max_fetches: 8
   max_searches: 4
-  max_total_tokens: 150000       # prompt + output tokens across the whole run
-  max_cost_usd: 0.25             # nominal, from the prices above
-  max_wall_seconds: 900          # includes time spent waiting out per-minute rate limits
-  max_article_chars: 2500        # text of one article shown to the model (the free tier allows 8k tokens/min)
-  max_request_tokens: null       # set (e.g. 5600) for providers with a small per-request cap, such as Groq's free tier
+  max_total_tokens: 150000 # prompt + output tokens across the whole run
+  max_cost_usd: 0.25 # nominal, from the prices above
+  max_wall_seconds: 900 # includes time spent waiting out per-minute rate limits
+  max_article_chars: 2500 # text of one article shown to the model (the free tier allows 8k tokens/min)
+  max_request_tokens: null # set (e.g. 5600) for providers with a small per-request cap, such as Groq's free tier
   finalize_reserve_tokens: 20000 # kept back so a budget stop can still produce a model-written report
 
 fetch:
   allowed_schemes: [http, https]
-  allowed_hosts: ["*"]           # fnmatch patterns; narrow this to restrict the crawl
-  blocked_hosts:                 # fetch proxies / reader services / caches: the model must not launder fetches through them
+  allowed_hosts: ["*"] # fnmatch patterns; narrow this to restrict the crawl
+  blocked_hosts: # fetch proxies / reader services / caches: the model must not launder fetches through them
     - "*.jina.ai"
     - "webcache.googleusercontent.com"
     - "*.archive.org"
@@ -77,25 +103,25 @@ fetch:
     - "archive.today"
     - "*.12ft.io"
   allowed_ports: [80, 443]
-  timeout_seconds: 10            # per connect/read
-  total_timeout_seconds: 20      # whole request incl. redirects (slow-loris guard)
+  timeout_seconds: 10 # per connect/read
+  total_timeout_seconds: 20 # whole request incl. redirects (slow-loris guard)
   max_bytes: 4000000
   max_redirects: 3
   user_agent: "ezwallet-tracker/1.0 (course project; contact via repo)"
 
 search:
   max_results: 5
-  time_range: month              # day|week|month|year
+  time_range: month # day|week|month|year
 
 retry:
-  max_retries: 5                 # after the first attempt (free tiers return short bursts of 429s)
+  max_retries: 5 # after the first attempt (free tiers return short bursts of 429s)
   base_delay: 5.0
   max_delay: 30.0
-  max_retry_after: 90.0          # a server asking for longer than this = give up
+  max_retry_after: 90.0 # a server asking for longer than this = give up
 
 dedupe:
-  auto_merge_similarity: 0.70          # code merges "new" items this similar to an existing development
-  min_similarity_to_trust_model: 0.12  # code refuses a model-claimed match below this
+  auto_merge_similarity: 0.70 # code merges "new" items this similar to an existing development
+  min_similarity_to_trust_model: 0.12 # code refuses a model-claimed match below this
 
 state:
   api_url_env: TRACKER_API_URL
