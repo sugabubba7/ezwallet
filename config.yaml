@@ -8,8 +8,8 @@ model:
   provider: openrouter # gemini | groq | openrouter | openai   (Groq's free tier caps requests at 7k tokens: see README)
   name: nvidia/nemotron-3-super-120b-a12b:free # qwen/qwen3.8-27b:free was withdrawn from OpenRouter's free tier on 2026-10-05
   temperature: 0.2
-  max_output_tokens: 3000 # the final report is the longest reply (K developments with quotes)
-  # reasoning_effort: low       # gpt-oss models only: keeps hidden reasoning tokens small
+  max_output_tokens: 8000 # the final report is the longest reply (K developments with quotes)
+  reasoning_effort: low # gpt-oss models only: keeps hidden reasoning tokens small
   # thinking_budget: 0         # only for 2.5-series models; Gemini 3.x manages thinking itself
   price_per_million_input_usd: 0.15 # nominal paid-tier prices; the free tier bills $0 but we still track the figure
   price_per_million_output_usd: 0.60
@@ -85,7 +85,7 @@ limits:
   max_steps: 24 # model calls (the reserved final call is extra)
   max_fetches: 8
   max_searches: 4
-  max_total_tokens: 150000 # prompt + output tokens across the whole run
+  max_total_tokens: 300000 # prompt + output tokens across the whole run
   max_cost_usd: 0.25 # nominal, from the prices above
   max_wall_seconds: 900 # includes time spent waiting out per-minute rate limits
   max_article_chars: 2500 # text of one article shown to the model (the free tier allows 8k tokens/min)
