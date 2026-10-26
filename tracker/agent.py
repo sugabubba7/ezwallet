@@ -279,6 +279,8 @@ class Agent:
     def _tool_finish(self, args: dict) -> dict:
         t0 = self.clock()
         L = self.cfg
+        if "_unparsed_arguments" in args and "report" not in args:  # provider sent arguments that are not valid JSON
+            args = {"report": args["_unparsed_arguments"]}
         if "report" not in args and "developments" in args:  # a common slip: developments passed at the top level
             args = {"report": {"developments": args["developments"], "notes": args.get("notes", "")}}
         elif isinstance(args.get("report"), list):

@@ -160,9 +160,10 @@ class OpenAICompat:
         for tc in msg.get("tool_calls") or []:
             fn = tc.get("function") or {}
             try:
-                args = json.loads(fn.get("arguments") or "{}")
+                # strict=False: some models put raw line breaks inside string values
+                args = json.loads(fn.get("arguments") or "{}", strict=False)
             except ValueError:
-                args = {}
+                args = {"_unparsed_arguments": str(fn.get("arguments"))[:20000]}
             calls.append((str(fn.get("name", "")), args if isinstance(args, dict) else {}))
             ids.append(str(tc.get("id") or f"c{len(ids)}"))
         return LlmResult(calls=calls, call_ids=ids, text=msg.get("content") or "", finish_reason=str(choice0.get("finish_reason", "")),

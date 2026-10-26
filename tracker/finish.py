@@ -45,15 +45,48 @@ def _numbers(summary: str) -> list[str]:
     return out
 
 
+_FENCE = re.compile(r"^\s*```[a-zA-Z]*\s*|\s*```\s*$")
+_ALT_KEYS = ("items", "results", "top_k", "top_developments", "ranked")
+
+
+def coerce_report(report) -> tuple[object, str | None]:
+    """Undo the common ways models mangle the `report` argument, so a formatting slip is not mistaken for a bad report.
+
+    Handles: the report sent as JSON *text* (often in ```json fences, with raw line breaks inside strings, or with
+    chatter before/after), a bare list of developments, the report nested one level too deep, and an alternate key
+    for the list. Returns (report, error); `error` explains a JSON failure precisely so the model can fix it.
+    Content is never invented or repaired here: provenance is still checked strictly by `validate`.
+    """
+    if isinstance(report, str):
+        text = _FENCE.sub("", report.strip())
+        starts = [i for i in (text.find("{"), text.find("[")) if i != -1]
+        if not starts:
+            return None, ("`report` was sent as text with no JSON in it. Send `report` as a JSON object "
+                          '(not a string): {"developments": [{"rank": 1, "title": ..., "summary": ..., "sources": [...]}]}')
+        try:
+            # strict=False accepts raw line breaks inside strings; raw_decode ignores trailing chatter
+            report, _ = json.JSONDecoder(strict=False).raw_decode(text[min(starts):])
+        except json.JSONDecodeError as e:
+            return None, (f"`report` was sent as text that is not valid JSON ({e.msg} at character {e.pos}). "
+                          "Send `report` as a JSON object, not a string. If it was cut off, use shorter summaries and quotes.")
+    if isinstance(report, list):
+        report = {"developments": report}
+    if isinstance(report, dict) and "developments" not in report:
+        if isinstance(report.get("report"), (dict, list)):
+            return coerce_report(report["report"])
+        alt = next((k for k in _ALT_KEYS if isinstance(report.get(k), list)), None)
+        if alt:
+            report = {**report, "developments": report[alt]}
+    return report, None
+
+
 def validate(report, *, k: int, known: dict[int, Known], fetched: dict[str, dict], auto_merge: float,
              min_trust: float) -> tuple[list[Dev], list[str]]:
     """Return (developments, errors). Errors are plain strings fed back to the model."""
     errors: list[str] = []
-    if isinstance(report, str):
-        try:
-            report = json.loads(report)
-        except ValueError:
-            return [], ["report must be an object with a `developments` list"]
+    report, err = coerce_report(report)
+    if err:
+        return [], [err]
     if not isinstance(report, dict) or not isinstance(report.get("developments"), list) or not report["developments"]:
         return [], ["report must be an object with a non-empty `developments` list"]
     raw = report["developments"]
@@ -179,11 +212,9 @@ def validate(report, *, k: int, known: dict[int, Known], fetched: dict[str, dict
 def validate_salvage(report, **kw) -> tuple[list[Dev], list[str]]:
     """Second-chance validation: keep every development that is fully supported and drop the ones that are not,
     instead of rejecting the whole report. Returns (developments, reasons the dropped ones failed)."""
-    if isinstance(report, str):
-        try:
-            report = json.loads(report)
-        except ValueError:
-            return [], ["report must be an object with a `developments` list"]
+    report, err = coerce_report(report)
+    if err:
+        return [], [err]
     if not isinstance(report, dict) or not isinstance(report.get("developments"), list) or not report["developments"]:
         return [], ["report must be an object with a non-empty `developments` list"]
     kept, dropped = [], []
