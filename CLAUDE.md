@@ -1,6 +1,8 @@
 # CLAUDE.md
 
-Project memory for Claude Code. Read this first, then `docs/PROJECT_CONTEXT.md` for the full story.
+Project memory for Claude Code. The full story is imported below:
+
+@docs/PROJECT_CONTEXT.md
 
 ## What EZ Wallet is
 
