@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "EZ Wallet Guard",
+  "version": "0.1.0",
+  "description": "Warns you before you send passwords, API keys, emails or phone numbers to ChatGPT or Claude. Runs only in your browser; makes no network requests and stores nothing.",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*"
+      ],
+      "js": ["detect.js", "sites.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["fonts/*.woff2"],
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*"
+      ]
+    }
+  ]
+}
