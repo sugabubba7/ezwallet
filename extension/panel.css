@@ -1,0 +1,11 @@
+#ezw-panel{position:fixed;right:20px;bottom:20px;z-index:2147483647;width:340px;max-width:calc(100vw - 40px);
+  background:rgba(18,18,18,.92);color:#fff;border:1px solid rgba(255,122,24,.5);border-radius:16px;
+  padding:12px 14px;font:13px/1.4 Inter,system-ui,sans-serif;backdrop-filter:blur(14px);box-shadow:0 8px 30px rgba(0,0,0,.4)}
+#ezw-panel .ezw-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#ezw-panel .ezw-title{font-weight:600;color:#ff7a18}
+#ezw-panel .ezw-sub{opacity:.7;font-size:12px;margin-bottom:8px}
+#ezw-panel button{font:inherit;cursor:pointer;border-radius:999px;border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.06);color:#fff;padding:5px 10px;margin:3px 4px 0 0;text-align:left}
+#ezw-panel button:hover{border-color:#ff7a18}
+#ezw-panel button.ezw-primary{background:#ff7a18;border-color:#ff7a18;color:#000;font-weight:600}
+#ezw-panel .ezw-x{border:none;background:none;padding:0 4px;margin:0;opacity:.6}

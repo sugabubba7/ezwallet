@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "EZ Wallet - Context Handoff",
+  "version": "0.1.0",
+  "description": "Carries the last few minutes of your AI conversation to the next AI tool. Stays in your browser.",
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*", "https://gemini.google.com/*", "https://claude.ai/*"],
+      "js": ["content.js"],
+      "css": ["panel.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
