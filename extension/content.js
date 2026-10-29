@@ -14,6 +14,7 @@
         [...document.querySelectorAll("[data-message-author-role]")].map((el) => ({
           role: el.getAttribute("data-message-author-role") === "user" ? "user" : "assistant",
           text: el.innerText.trim(),
+          li: liTexts(el),
         })),
       input: () => document.querySelector("#prompt-textarea"),
     },
@@ -23,6 +24,7 @@
         [...document.querySelectorAll("user-query, model-response")].map((el) => ({
           role: el.tagName.toLowerCase() === "user-query" ? "user" : "assistant",
           text: el.innerText.trim(),
+          li: liTexts(el),
         })),
       input: () => document.querySelector("rich-textarea .ql-editor, div[contenteditable='true']"),
     },
@@ -32,10 +34,13 @@
         [...document.querySelectorAll("[data-testid='user-message'], .font-claude-response")].map((el) => ({
           role: el.getAttribute("data-testid") === "user-message" ? "user" : "assistant",
           text: el.innerText.trim(),
+          li: liTexts(el),
         })),
       input: () => document.querySelector("div[contenteditable='true']"),
     },
   };
+
+  const liTexts = (el) => [...el.querySelectorAll("li")].map((li) => li.innerText.trim());
 
   const site = SITES[location.hostname];
   if (!site) return;
@@ -46,18 +51,22 @@
   };
 
   // ---- summarize on the device ----
-  function bullets(text) {
-    return text
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => /^([-*•]|\d+[.)])\s+/.test(l))
-      .map((l) => l.replace(/^([-*•]|\d+[.)])\s+/, "").replace(/\*\*/g, ""))
+  function bullets(msg) {
+    const lines = msg.li && msg.li.length
+      ? msg.li
+      : msg.text
+          .split("\n")
+          .map((l) => l.trim())
+          .filter((l) => /^([-*•]|\d+[.)])\s+/.test(l))
+          .map((l) => l.replace(/^([-*•]|\d+[.)])\s+/, ""));
+    return lines
+      .map((l) => l.replace(/\*\*/g, ""))
       .map((l) => l.split(/[:\-–—]/)[0].trim())
       .filter((l) => l.length > 1 && l.length < 60);
   }
 
   function summarize(msgs) {
-    const recent = msgs.slice(-MAX_MSGS).map((m) => ({ role: m.role, text: m.text.slice(0, MAX_CHARS) }));
+    const recent = msgs.slice(-MAX_MSGS).map((m) => ({ role: m.role, text: m.text.slice(0, MAX_CHARS), li: m.li }));
     const firstUser = recent.find((m) => m.role === "user");
     const lastAssistant = [...recent].reverse().find((m) => m.role === "assistant");
     return {
@@ -66,7 +75,7 @@
       savedAt: Date.now(),
       expiresAt: Date.now() + TTL_MS,
       topic: firstUser ? firstUser.text.split("\n")[0].slice(0, 140) : "",
-      items: lastAssistant ? bullets(lastAssistant.text).slice(0, 8) : [],
+      items: lastAssistant ? bullets(lastAssistant).slice(0, 8) : [],
       messages: recent,
     };
   }
