@@ -1,6 +1,6 @@
 import type { Config } from "tailwindcss";
 
-/** One typeface (Montserrat) and one palette: orange shades + warm blacks. */
+/** One typeface (Montserrat) and one palette: grays, white and black. */
 export default {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
@@ -10,24 +10,24 @@ export default {
       },
       colors: {
         ember: {
-          50: "#fff4eb",
-          100: "#ffe4cc",
-          200: "#ffc895",
-          300: "#ffa65c",
-          400: "#fb8a35",
-          500: "#e8702a",
-          600: "#c9551a",
-          700: "#9e3e12",
-          800: "#7a2e0e",
-          900: "#4d1c08",
-          950: "#2a0f04",
+          50: "#f5f5f7",
+          100: "#e8e8ec",
+          200: "#d4d4d9",
+          300: "#b8b8bf",
+          400: "#9a9aa2",
+          500: "#7c7c85",
+          600: "#5e5e66",
+          700: "#46464d",
+          800: "#2e2e33",
+          900: "#1c1c1f",
+          950: "#0b0b0c",
         },
-        ink: { 700: "#2a211b", 800: "#1d1612", 900: "#140f0c", 950: "#0b0806" },
-        stitch: "#8a4a22",
+        ink: { 700: "#2a2a2e", 800: "#1c1c1f", 900: "#121214", 950: "#0b0b0c" },
+        stitch: "#5a5a62",
       },
       boxShadow: {
-        card: "0 10px 30px -12px rgba(20,6,0,.55), 0 2px 6px rgba(20,6,0,.2)",
-        glow: "0 0 0 1px rgba(232,112,42,.6), 0 0 24px rgba(232,112,42,.35)",
+        card: "0 10px 30px -12px rgba(10,10,14,.55), 0 2px 6px rgba(10,10,14,.2)",
+        glow: "0 0 0 1px rgba(255,255,255,.55), 0 0 24px rgba(255,255,255,.22)",
       },
       keyframes: {
         shake: {
