@@ -32,15 +32,15 @@ export const LEADERBOARD: LeaderboardRow[] = [
   },
   {
     company: "Google (Gemini API only)",
-    tokensPerMonthT: 950,
+    tokensPerMonthT: 1380,
     confidence: "derived",
     scope: "Developer API traffic only",
-    asOf: "July 2026 (Q2 earnings)",
-    how: "Stated by Google on its Q2 2026 call: model APIs processing 22 billion tokens/min (up from 16B+ the quarter before) × 43,200 minutes in a 30-day month ≈ 950 trillion.",
+    asOf: "Oct 2026 (Q3 earnings)",
+    how: "Stated by Google with its Q3 2026 results (28 Oct 2026): first-party model APIs processing nearly 32 billion tokens/min, about 40% more than the 22 billion a quarter earlier. × 43,200 minutes in a 30-day month ≈ 1.38 quadrillion (about 1,380 trillion).",
     sources: [
-      { label: "Sundar Pichai on X, Q2 2026 results", url: "https://x.com/sundarpichai/status/2080021408856293584" },
-      { label: "Alphabet Q2 2026 earnings call transcript (Yahoo Finance)", url: "https://finance.yahoo.com/quote/GOOG/earnings/GOOG-Q2-2026-earnings_call-657320.html" },
-      { label: "CNBC, Alphabet Q2 2026 earnings", url: "https://www.cnbc.com/2026/07/22/google-earnings-q2-goog-live-updates.html" },
+      { label: "Alphabet Q3 2026 earnings release (SEC filing)", url: "https://www.sec.gov/Archives/edgar/data/0001652044/000165204426000080/googexhibit991q32026.htm" },
+      { label: "Alphabet Q3 2026 earnings call transcript (Motley Fool)", url: "https://www.fool.com/earnings/call-transcripts/2026/10/29/alphabet-googl-q3-2026-earnings-call-transcript/" },
+      { label: "Alphabet Q3 earnings call highlights (Yahoo Finance)", url: "https://finance.yahoo.com/markets/stocks/articles/alphabet-q3-earnings-call-highlights-050416594.html" },
     ],
   },
   {
@@ -87,10 +87,10 @@ export const CHARTS: ChartSpec[] = [
     subtitle: "The one like-for-like comparison available: API traffic only",
     unit: "T tokens / month",
     slices: [
-      { label: "Google (Gemini API)", value: GOOGLE_API, note: "≈22B tokens/min, Jul 2026" },
+      { label: "Google (Gemini API)", value: GOOGLE_API, note: "≈32B tokens/min, Oct 2026" },
       { label: "OpenAI (API)", value: OPENAI_API, note: "≈15B tokens/min, Mar 2026" },
     ],
-    footnote: "Anthropic and every other provider are missing because they publish no volume, so these shares are only between the two disclosed. The two figures are from different dates (Google July 2026, OpenAI March 2026).",
+    footnote: "Anthropic and every other provider are missing because they publish no volume, so these shares are only between the two disclosed. The two figures are from different dates (Google October 2026, OpenAI March 2026), and Google's has been growing fast.",
   },
   {
     id: "google-split",
@@ -101,6 +101,6 @@ export const CHARTS: ChartSpec[] = [
       { label: "Gemini API (developers)", value: GOOGLE_API, note: "derived from the API rate" },
       { label: "Search, Workspace, Android, other", value: GOOGLE_TOTAL - GOOGLE_API, note: "total minus the API" },
     ],
-    footnote: "Most of Google's headline volume is its own products, not customers calling the API. That is why it cannot be compared with OpenAI's API-only figure. The API figure is from July 2026 and the total from May 2026, so the split is approximate.",
+    footnote: "Most of Google's headline volume is its own products, not customers calling the API. That is why it cannot be compared with OpenAI's API-only figure. The API figure is from October 2026 and the total from May 2026 (no newer total found), so the split mixes dates and is approximate.",
   },
 ];
