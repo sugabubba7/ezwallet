@@ -196,7 +196,8 @@ body {
    prefer reduced motion, see the open wallet with the first card out. */
 @keyframes ezw-cover { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
 @keyframes ezw-shift { from { transform: translateX(0); } to { transform: translateX(170px); } }
-@keyframes ezw-zoom { from { transform: scale(1); } to { transform: scale(1.45); } }
+/* The wallet starts smaller and grows to fill the window; the whole open wallet and popped cards stay inside the frame. */
+@keyframes ezw-zoom { from { transform: scale(0.78); } to { transform: translateY(17px) scale(0.98); } }
 @keyframes ezw-cpop {
   0% { transform: translateY(0); }
   24% { transform: translateY(-124px); }
@@ -230,7 +231,8 @@ body {
   animation-range: cover 31% cover 41%;
 }
 .ezw-rig {
-  transform-origin: 74% 50%;
+  transform-origin: 50% 50%;
+  transform: translateY(17px) scale(0.98);
   animation: ezw-zoom linear both;
   animation-timeline: --pocket;
   animation-range: cover 40% cover 45%;
