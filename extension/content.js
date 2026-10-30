@@ -48,9 +48,7 @@
     .quiet { margin: -8px 0 16px; font-size: 12px; }
     .note { color: var(--accent); font-size: 12px; }
     .cover { margin-bottom: 12px; }
-    .cover button { width: 100%; }
-    .credit { display: block; margin-top: 5px; font-size: 11px; color: var(--muted); text-align: center; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .cover button { width: 100%; }    .row { display: flex; gap: 8px; flex-wrap: wrap; }
     button { cursor: pointer; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 500;
       border: 1px solid var(--line); background: transparent; color: var(--ink); }
     button:hover { background: var(--card); }
@@ -105,19 +103,6 @@
     if (pillHost) pillHost.remove();
     pillHost = null;
   }
-
-  // Labels for the cover-up button, rotated each time the pop-up opens. Credits are kept
-  // to what we can stand behind: a named source where there is one, otherwise "idiom"/"slang".
-  const COVER_LINES = [
-    ["These aren't the droids", 'Obi-Wan Kenobi, Star Wars: A New Hope'],
-    ["It's handled", 'Olivia Pope, Scandal'],
-    ['Sweep it under the rug', 'Classic idiom'],
-    ['Keep it on the DL', "Slang for 'down low'"],
-    ['What happens in Vegas…', 'Las Vegas ad campaign, 2003 (and The Hangover)'],
-    ['Bury the body', 'Every crime thriller ever'],
-    ['First rule of Fight Club', 'Fight Club, 1999'],
-  ];
-  let coverLine = Math.floor(Math.random() * COVER_LINES.length);
 
   function flash(text) {
     showPill(text);
@@ -206,10 +191,9 @@
     };
 
     const canCover = found.some((f) => f.redact);
-    const [coverLabel, coverCredit] = COVER_LINES[coverLine++ % COVER_LINES.length];
     const coverBtn = el('button', {
       className: 'primary',
-      textContent: coverLabel,
+      textContent: 'Cover it up',
       title: 'Swap the secrets in your message for placeholders like [OPENAI_KEY]. Nothing is sent.',
     });
     coverBtn.addEventListener('click', cover);
@@ -237,7 +221,7 @@
       list,
       ...(quietText ? [el('p', { className: 'quiet', textContent: `Also noticed: ${quietText}.` })] : []),
       ...(note ? [el('p', { className: 'note', textContent: note })] : []),
-      ...(canCover ? [el('div', { className: 'cover' }, coverBtn, el('span', { className: 'credit', textContent: `~ ${coverCredit}` }))] : []),
+      ...(canCover ? [el('div', { className: 'cover' }, coverBtn)] : []),
       el('div', { className: 'row' }, editBtn, sendBtn, pauseBtn));
     card.setAttribute('aria-label', 'Private data warning');
 

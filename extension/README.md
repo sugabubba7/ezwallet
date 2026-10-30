@@ -1,6 +1,6 @@
 # EZ Wallet Guard
 
-A tiny Chrome extension (Manifest V3) for chatgpt.com and claude.ai. When you press Enter or Send and your message contains an API key, `.env` secret or password, it shows a pop-up (emails and phone numbers only get a quiet "also noticed" line inside it; on their own they never interrupt): **the cover-up button** (its label rotates through movie and pop-culture lines, each with a credit under it; it swaps keys and passwords in your message for placeholders like `[OPENAI_KEY]`; nothing is sent, you review first), **Abort mission** (back to your message), **Send anyway**, or **Pause for this tab**. Private-key blocks and secrets split across lines cannot be covered automatically; the pop-up says so and leaves them for you to edit.
+A tiny Chrome extension (Manifest V3) for chatgpt.com and claude.ai. When you press Enter or Send and your message contains an API key, `.env` secret or password, it shows a pop-up (emails and phone numbers only get a quiet "also noticed" line inside it; on their own they never interrupt): **Cover it up** (swaps keys and passwords in your message for placeholders like `[OPENAI_KEY]`; nothing is sent, you review first), **Abort mission** (back to your message), **Send anyway**, or **Pause for this tab**. Private-key blocks and secrets split across lines cannot be covered automatically; the pop-up says so and leaves them for you to edit.
 
 No build step, no dependencies, no login, no server.
 
