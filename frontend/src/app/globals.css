@@ -152,3 +152,70 @@ body {
 .no-scrollbar {
   scrollbar-width: none;
 }
+
+/* ---------- Landing page: wallet that opens as you scroll ----------
+   Scroll-driven (CSS animation-timeline), no JS. The base styles below are the
+   final "open" state, so browsers without scroll timelines, and people who
+   prefer reduced motion, see the open wallet with the first card out. */
+@keyframes ezw-cover { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
+@keyframes ezw-shift { from { transform: translateX(0); } to { transform: translateX(170px); } }
+@keyframes ezw-zoom { from { transform: scale(1); } to { transform: scale(1.45); } }
+@keyframes ezw-cpop {
+  0% { transform: translateY(0); }
+  24% { transform: translateY(-124px); }
+  32% { transform: translateY(-110px); }
+  65% { transform: translateY(-110px); }
+  100% { transform: translateY(0); }
+}
+@keyframes ezw-cend {
+  0% { transform: translateY(0); }
+  24% { transform: translateY(-124px); }
+  32% { transform: translateY(-110px); }
+  100% { transform: translateY(-110px); }
+}
+@keyframes ezw-fade { from { opacity: 1; } to { opacity: 0; } }
+@keyframes ezw-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+
+.ezw-pocket { view-timeline: --pocket block; }
+.ezw-wallet {
+  perspective: 1400px;
+  transform: translateX(170px);
+  animation: ezw-shift linear both;
+  animation-timeline: --pocket;
+  animation-range: cover 31% cover 41%;
+}
+.ezw-cover {
+  transform-style: preserve-3d;
+  transform-origin: 0% 50%;
+  transform: rotateY(-180deg);
+  animation: ezw-cover linear both;
+  animation-timeline: --pocket;
+  animation-range: cover 31% cover 41%;
+}
+.ezw-rig {
+  transform-origin: 74% 50%;
+  animation: ezw-zoom linear both;
+  animation-timeline: --pocket;
+  animation-range: cover 40% cover 45%;
+}
+.ezw-c1 { transform: translateY(-110px); animation: ezw-cpop linear both; animation-timeline: --pocket; animation-range: cover 44% cover 58%; }
+.ezw-c2 { animation: ezw-cpop linear both; animation-timeline: --pocket; animation-range: cover 54% cover 68%; }
+.ezw-c3 { animation: ezw-cend linear both; animation-timeline: --pocket; animation-range: cover 64% cover 76%; }
+.ezw-prompt { opacity: 0; animation: ezw-fade linear both; animation-timeline: --pocket; animation-range: cover 27% cover 31%; }
+.ezw-chev { animation: ezw-bounce 1.6s ease-in-out infinite; }
+.ezw-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  box-sizing: border-box;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+/* The stage is drawn at 712x560; shrink it on narrow screens. */
+@media (max-width: 760px) { .ezw-stage { zoom: 0.85; } }
+@media (max-width: 660px) { .ezw-stage { zoom: 0.7; } }
+@media (max-width: 540px) { .ezw-stage { zoom: 0.55; } }
+@media (max-width: 420px) { .ezw-stage { zoom: 0.46; } }
+@media (prefers-reduced-motion: reduce) {
+  .ezw-wallet, .ezw-cover, .ezw-rig, .ezw-c1, .ezw-c2, .ezw-c3, .ezw-prompt, .ezw-chev { animation: none; }
+}
