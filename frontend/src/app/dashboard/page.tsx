@@ -135,7 +135,7 @@ export default function Dashboard() {
   if (loading || !user) {
     return (
       <main className="grid min-h-screen place-items-center">
-        <Loader2 className="h-6 w-6 animate-spin text-white/50" />
+        <Loader2 className="h-6 w-6 animate-spin text-ink-950/50" />
       </main>
     );
   }
@@ -147,10 +147,12 @@ export default function Dashboard() {
       <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="eyebrow">Signed in as</p>
-            <h1 className="mt-1 break-all text-2xl font-semibold text-white sm:text-3xl">{displayName(user)}</h1>
+            <p className="eyebrow !text-ink-950/55">Signed in as</p>
+            <h1 className="mt-1 break-all text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-ink-950 sm:text-4xl">
+              <span className="bg-gradient-to-r from-[#0B0B0C] to-[#7C7C84] bg-clip-text pr-1 italic text-transparent">{displayName(user)}</span>
+            </h1>
           </div>
-          <p className="max-w-md text-sm text-white/70">
+          <p className="max-w-md text-sm text-ink-950/70">
             Keep sensitive context sealed in your wallet. Attach a card only when a prompt needs it; Gemini sees it once and nothing is retained.
           </p>
         </div>
@@ -165,9 +167,9 @@ export default function Dashboard() {
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
           {/* Section B: wallet */}
-          <section className="liquid-glass rounded-[36px] px-4 pb-8 pt-5 sm:px-8" aria-label="Encrypted data pocket">
+          <section className="panel-leather rounded-[36px] px-4 pb-8 pt-5 sm:px-8" aria-label="Encrypted data pocket">
             <div className="mb-2 flex items-center justify-between text-white">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.16em]">Data Pocket</h2>
+              <h2 className="text-lg font-extrabold tracking-tight">Data <span className="font-medium">pocket</span></h2>
               <span className="chip bg-black/20 text-white/80">{cards.length} cards · encrypted</span>
             </div>
             <WalletContainer
@@ -185,7 +187,7 @@ export default function Dashboard() {
           </section>
 
           {/* Section A: cover flow */}
-          <section className="liquid-glass min-h-[560px] overflow-hidden rounded-[36px]" aria-label="Chat summaries">
+          <section className="panel-leather min-h-[560px] overflow-hidden rounded-[36px]" aria-label="Chat summaries">
             <CoverFlowSlider chats={chats} activeId={focusChat} onDelete={deleteChat} />
           </section>
         </div>

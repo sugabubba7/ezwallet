@@ -16,7 +16,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-10">
       <div className="mb-2 self-start sm:absolute sm:left-6 sm:top-6 sm:mb-0">
-        <Logo />
+        <Logo tone="dark" />
       </div>
       <div className="relative w-full max-w-[440px] pt-[186px]">
         {PEEK.map((c, i) => (
@@ -39,7 +39,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
           </motion.div>
         ))}
 
-        <div className="leather relative z-10 rounded-[34px] rounded-b-[56px] px-7 pb-9 pt-8 shadow-[0_30px_60px_-20px_rgba(20,6,0,.7)]">
+        <div className="leather relative z-10 rounded-[34px] rounded-b-[56px] px-7 pb-9 pt-8 shadow-[0_30px_60px_-20px_rgba(10,10,16,.6)]">
           <div className="pointer-events-none absolute inset-[9px] rounded-[26px] rounded-b-[48px] border border-dashed border-stitch/80" />
           <div className="relative">
             <p className="eyebrow text-center !text-white/45">{subtitle}</p>

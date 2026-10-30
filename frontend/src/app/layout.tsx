@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { PageBackdrop } from "@/components/PageBackdrop";
 import { AuthProvider } from "@/lib/auth";
 
-const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const sans = Montserrat({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "EZ Wallet: LLM Data Wallet",
-  description: "Encrypted context vault and zero-data-retention Gemini proxy.",
+  title: "EZ Wallet: prompt once, pivot anywhere",
+  description: "Carry your context from one AI tool to the next. Your chats stay in your browser.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

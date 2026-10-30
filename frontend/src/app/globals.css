@@ -2,17 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light gray ground like the landing page; panels on it are dark glass. */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html {
-  background: #0b0806;
+  background: #e6e6e9;
 }
 html,
 body {
   min-height: 100%;
-  color: #fff4eb;
+  color: #0b0b0c;
   -webkit-font-smoothing: antialiased;
 }
 /* body stays transparent so the fixed .page-bg layer shows through */
@@ -20,13 +21,13 @@ body {
   background: transparent;
 }
 
-/* ---------- Ambient page backdrop: orange field + blurred dark figure ---------- */
+/* ---------- Ambient page backdrop: light gray field with soft shading ---------- */
 .page-bg {
   position: fixed;
   inset: 0;
   z-index: -10;
   overflow: hidden;
-  background: linear-gradient(160deg, #f0922f 0%, #e07420 35%, #b9500f 70%, #5a2206 100%);
+  background: linear-gradient(180deg, #e6e6e9 0%, #dcdce0 55%, #e6e6e9 100%);
 }
 .page-bg > span {
   position: absolute;
@@ -42,16 +43,17 @@ body {
   .liquid-glass {
     position: relative;
     isolation: isolate;
+    color: #f5f5f7;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.03) 55%),
-      rgba(30, 14, 6, 0.34);
-    -webkit-backdrop-filter: blur(28px) saturate(165%);
-    backdrop-filter: blur(28px) saturate(165%);
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 55%),
+      rgba(62, 62, 70, 0.9);
+    -webkit-backdrop-filter: blur(28px) saturate(140%);
+    backdrop-filter: blur(28px) saturate(140%);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.42),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.1),
-      inset 0 0 28px rgba(255, 236, 220, 0.06),
-      0 30px 60px -24px rgba(30, 8, 0, 0.55);
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 0 28px rgba(255, 255, 255, 0.04),
+      0 30px 60px -24px rgba(20, 20, 30, 0.5);
   }
   .liquid-glass::before {
     content: "";
@@ -83,28 +85,62 @@ body {
     background: radial-gradient(120% 70% at 15% 0%, rgba(255, 255, 255, 0.16), transparent 55%);
     pointer-events: none;
   }
+  /* Big dashboard panels: the landing wallet's matte leather, with soft shading, a rim light, fine grain and stitching. */
+  .panel-leather {
+    position: relative;
+    isolation: isolate;
+    color: #f5f5f7;
+    background:
+      radial-gradient(120% 70% at 18% 0%, rgba(255, 255, 255, 0.14), transparent 55%),
+      linear-gradient(160deg, #4a4a52, #2a2a30);
+    box-shadow:
+      inset 0 1.5px 1px rgba(255, 255, 255, 0.26),
+      inset 1.5px 0 1px rgba(255, 255, 255, 0.1),
+      inset 0 -6px 12px rgba(0, 0, 0, 0.28),
+      0 28px 50px -22px rgba(20, 20, 30, 0.55);
+  }
+  .panel-leather::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    mix-blend-mode: soft-light;
+    opacity: 0.3;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .panel-leather::after {
+    content: "";
+    position: absolute;
+    inset: 10px;
+    z-index: -1;
+    border: 1.5px dashed rgba(255, 255, 255, 0.1);
+    border-radius: calc(var(--panel-r, 36px) - 10px);
+    pointer-events: none;
+  }
   /* Darker, smokier variant (the "Search or Ask" bar) */
   .liquid-glass-deep {
     background:
-      linear-gradient(180deg, rgba(8, 4, 2, 0.72) 0%, rgba(40, 20, 10, 0.42) 100%),
-      rgba(20, 10, 4, 0.3);
+      linear-gradient(180deg, rgba(30, 30, 36, 0.72) 0%, rgba(62, 62, 70, 0.5) 100%),
+      rgba(40, 40, 46, 0.4);
   }
 
-  /* ---------- Energy card (orange -> deep red gradient) ---------- */
+  /* ---------- Energy card (graphite gradient) ---------- */
   .energy-card {
     background:
-      radial-gradient(90% 60% at 0% 0%, rgba(255, 150, 80, 0.45), transparent 60%),
-      linear-gradient(150deg, #5c1606 0%, #9a2e0b 40%, #cf5518 78%, #ea7a2b 100%);
+      radial-gradient(90% 60% at 0% 0%, rgba(255, 255, 255, 0.22), transparent 60%),
+      linear-gradient(150deg, #2a2a30 0%, #3e3e45 40%, #5a5a62 78%, #7a7a82 100%);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.28),
-      inset 0 -12px 30px rgba(40, 6, 0, 0.35),
-      0 30px 60px -18px rgba(40, 8, 0, 0.7);
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 -12px 30px rgba(0, 0, 0, 0.35),
+      0 30px 60px -18px rgba(10, 10, 16, 0.6);
   }
 
   .leather {
     background:
       radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 60%),
-      linear-gradient(180deg, #1d1612 0%, #120d0a 100%);
+      linear-gradient(180deg, #1c1c20 0%, #121214 100%);
   }
 
   .input {
@@ -114,9 +150,10 @@ body {
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-ember-500 px-5 py-3 text-sm font-semibold
-           text-white shadow-[inset_0_1px_0_rgba(255,255,255,.35),0_10px_24px_-10px_rgba(120,30,0,.9)] transition
-           hover:bg-ember-400 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-45;
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-ink-950
+           shadow-[inset_0_1px_0_rgba(255,255,255,.8),0_10px_24px_-10px_rgba(0,0,0,.6)] transition
+           hover:brightness-95 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-45;
+    background: linear-gradient(180deg, #ffffff, #c9c9cf);
   }
 
   .btn-ghost {
@@ -125,9 +162,9 @@ body {
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-ember-600 px-5 py-3 text-sm font-semibold
-           text-white shadow-[inset_0_1px_0_rgba(255,255,255,.25)] ring-1 ring-ember-300/40 transition
-           hover:bg-ember-500 active:scale-[.98] disabled:cursor-not-allowed disabled:bg-ink-800 disabled:text-white/40
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-ember-700 px-5 py-3 text-sm font-semibold
+           text-white shadow-[inset_0_1px_0_rgba(255,255,255,.2)] ring-1 ring-white/30 transition
+           hover:bg-ember-600 active:scale-[.98] disabled:cursor-not-allowed disabled:bg-ink-800 disabled:text-white/40
            disabled:shadow-none disabled:ring-white/10;
   }
 
@@ -151,4 +188,108 @@ body {
 }
 .no-scrollbar {
   scrollbar-width: none;
+}
+
+/* ---------- Landing page: wallet that opens as you scroll ----------
+   Scroll-driven (CSS animation-timeline), no JS. The base styles below are the
+   final "open" state, so browsers without scroll timelines, and people who
+   prefer reduced motion, see the open wallet with the first card out. */
+@keyframes ezw-cover { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
+@keyframes ezw-shift { from { transform: translateX(0); } to { transform: translateX(170px); } }
+/* The wallet starts smaller and grows to fill the window; the whole open wallet and popped cards stay inside the frame. */
+@keyframes ezw-zoom { from { transform: scale(0.78); } to { transform: translateY(17px) scale(0.98); } }
+@keyframes ezw-cpop {
+  0% { transform: translateY(0); }
+  24% { transform: translateY(-124px); }
+  32% { transform: translateY(-110px); }
+  65% { transform: translateY(-110px); }
+  100% { transform: translateY(0); }
+}
+@keyframes ezw-cend {
+  0% { transform: translateY(0); }
+  24% { transform: translateY(-124px); }
+  32% { transform: translateY(-110px); }
+  100% { transform: translateY(-110px); }
+}
+@keyframes ezw-fade { from { opacity: 1; } to { opacity: 0; } }
+@keyframes ezw-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+
+.ezw-pocket { view-timeline: --pocket block; }
+.ezw-wallet {
+  perspective: 1400px;
+  transform: translateX(170px);
+  animation: ezw-shift linear both;
+  animation-timeline: --pocket;
+  animation-range: cover 31% cover 41%;
+}
+.ezw-cover {
+  transform-style: preserve-3d;
+  transform-origin: 0% 50%;
+  transform: rotateY(-180deg);
+  animation: ezw-cover linear both;
+  animation-timeline: --pocket;
+  animation-range: cover 31% cover 41%;
+}
+.ezw-rig {
+  transform-origin: 50% 50%;
+  transform: translateY(17px) scale(0.98);
+  animation: ezw-zoom linear both;
+  animation-timeline: --pocket;
+  animation-range: cover 40% cover 45%;
+}
+.ezw-c1 { transform: translateY(-110px); animation: ezw-cpop linear both; animation-timeline: --pocket; animation-range: cover 44% cover 58%; }
+.ezw-c2 { animation: ezw-cpop linear both; animation-timeline: --pocket; animation-range: cover 54% cover 68%; }
+.ezw-c3 { animation: ezw-cend linear both; animation-timeline: --pocket; animation-range: cover 64% cover 76%; }
+.ezw-prompt { opacity: 0; animation: ezw-fade linear both; animation-timeline: --pocket; animation-range: cover 27% cover 31%; }
+.ezw-chev { animation: ezw-bounce 1.6s ease-in-out infinite; }
+.ezw-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  box-sizing: border-box;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+/* Soft matte material: diffuse shading, a gentle rim light, fine grain and soft shadows. */
+.ezw-leather {
+  background:
+    radial-gradient(120% 90% at 18% 0%, rgba(255, 255, 255, 0.16), transparent 55%),
+    linear-gradient(160deg, #3a3a40, #17171a);
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.22),
+    inset 1.5px 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 -5px 10px rgba(0, 0, 0, 0.35),
+    0 18px 34px -12px rgba(0, 0, 0, 0.45);
+}
+.ezw-leather::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.ezw-leather-deep {
+  background: linear-gradient(160deg, #2a2a2e, #101012);
+  box-shadow: inset 0 6px 16px rgba(0, 0, 0, 0.5), 0 18px 34px -12px rgba(0, 0, 0, 0.45);
+}
+.ezw-snap {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d6d6db, #8e8e96 60%, #5e5e66);
+  box-shadow:
+    0 0 0 4px #1c1c1f,
+    0 3px 6px rgba(0, 0, 0, 0.4),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+    inset 0 2px 2px rgba(255, 255, 255, 0.5);
+}
+
+/* The stage is drawn at 712x560; shrink it on narrow screens. */
+@media (max-width: 760px) { .ezw-stage { zoom: 0.85; } }
+@media (max-width: 660px) { .ezw-stage { zoom: 0.7; } }
+@media (max-width: 540px) { .ezw-stage { zoom: 0.55; } }
+@media (max-width: 420px) { .ezw-stage { zoom: 0.46; } }
+@media (prefers-reduced-motion: reduce) {
+  .ezw-wallet, .ezw-cover, .ezw-rig, .ezw-c1, .ezw-c2, .ezw-c3, .ezw-prompt, .ezw-chev { animation: none; }
 }

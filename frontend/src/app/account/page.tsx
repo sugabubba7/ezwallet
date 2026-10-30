@@ -89,7 +89,7 @@ export default function AccountPage() {
   if (loading || !user) {
     return (
       <main className="grid min-h-screen place-items-center">
-        <Loader2 className="h-6 w-6 animate-spin text-white/50" />
+        <Loader2 className="h-6 w-6 animate-spin text-ink-950/50" />
       </main>
     );
   }
@@ -102,8 +102,8 @@ export default function AccountPage() {
       <TopBar />
       <main className="mx-auto max-w-3xl space-y-6 px-4 pb-16 pt-8 sm:px-6">
         <div>
-          <p className="eyebrow">Account management</p>
-          <h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Your wallet identity</h1>
+          <p className="eyebrow !text-ink-950/55">Account management</p>
+          <h1 className="mt-1 text-2xl font-semibold text-ink-950 sm:text-3xl">Your wallet identity</h1>
         </div>
 
         {/* Identity summary */}

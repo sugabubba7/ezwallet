@@ -36,12 +36,12 @@ const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefine
 
 const STATUS_STYLE: Record<string, string> = {
   complete: "bg-white/15 text-white",
-  partial: "bg-amber-400/20 text-amber-100",
-  failed: "bg-ember-600/40 text-ember-100",
+  partial: "bg-white/10 text-white/85 ring-1 ring-white/25",
+  failed: "bg-ember-700/60 text-ember-100",
   running: "bg-white/10 text-white/70",
   fetched: "bg-white/15 text-white",
   skipped: "bg-white/10 text-white/60",
-  rejected: "bg-ember-600/40 text-ember-100",
+  rejected: "bg-ember-700/60 text-ember-100",
 };
 const ARTICLE_LABEL: Record<string, string> = { fetched: "fetched", skipped: "skipped (already seen)", rejected: "rejected by guardrail", failed: "failed" };
 
@@ -146,7 +146,7 @@ export default function TrackerPage() {
   if (loading || !user) {
     return (
       <main className="grid min-h-screen place-items-center">
-        <Loader2 className="h-6 w-6 animate-spin text-white/50" />
+        <Loader2 className="h-6 w-6 animate-spin text-ink-950/50" />
       </main>
     );
   }
@@ -161,9 +161,9 @@ export default function TrackerPage() {
       <TopBar />
       <main className="mx-auto max-w-5xl space-y-6 px-4 pb-16 pt-8 sm:px-6">
         <div>
-          <p className="eyebrow">Agentic tracker</p>
-          <h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Current competitors to EZ Wallet</h1>
-          <p className="mt-1 max-w-2xl text-sm text-white/60">
+          <p className="eyebrow !text-ink-950/55">Agentic tracker</p>
+          <h1 className="mt-1 text-2xl font-semibold text-ink-950 sm:text-3xl">Current competitors to EZ Wallet</h1>
+          <p className="mt-1 max-w-2xl text-sm text-ink-950/65">
             A research agent searches the web, ranks the top developments and remembers what it has already seen, so each run reports only what changed.
           </p>
         </div>
@@ -172,7 +172,7 @@ export default function TrackerPage() {
 
         {runs === null && !error && (
           <div className="grid place-items-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-white/50" />
+            <Loader2 className="h-6 w-6 animate-spin text-ink-950/50" />
           </div>
         )}
 

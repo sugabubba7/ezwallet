@@ -249,8 +249,8 @@ export function WalletContainer(props: Props) {
           <svg width={width} height={POCKET_H} className="absolute inset-0 overflow-visible" aria-hidden>
             <defs>
               <linearGradient id="leather-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#1d1612" />
-                <stop offset="100%" stopColor="#120d0a" />
+                <stop offset="0%" stopColor="#1c1c20" />
+                <stop offset="100%" stopColor="#121214" />
               </linearGradient>
               <radialGradient id="leather-sheen" cx="50%" cy="0%" r="80%">
                 <stop offset="0%" stopColor="rgba(255,255,255,.07)" />
@@ -269,7 +269,7 @@ export function WalletContainer(props: Props) {
             <path d={pocketPath(width, POCKET_H)} fill="url(#leather-fill)" filter="url(#pocket-shadow)" />
             <path d={pocketPath(width, POCKET_H)} fill="url(#leather-sheen)" />
             <path d={pocketPath(width, POCKET_H)} fill="#fff" filter="url(#leather-grain)" />
-            <path d={pocketPath(width, POCKET_H, 9)} fill="none" stroke="#8a4a22" strokeOpacity=".75" strokeWidth="1.3" strokeDasharray="5 4" />
+            <path d={pocketPath(width, POCKET_H, 9)} fill="none" stroke="#6b6b73" strokeOpacity=".75" strokeWidth="1.3" strokeDasharray="5 4" />
           </svg>
 
           <div className="relative flex h-full flex-col items-center px-8 text-center" style={{ paddingTop: NOTCH + 42 }}>

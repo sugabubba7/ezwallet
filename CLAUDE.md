@@ -39,7 +39,7 @@ It started as an NYU course project (CSCI-GA.2630, Assignment 1 = the web app, A
 
 Key backend files: `app/main.py` (routers, lifespan), `app/deps.py` (auth, ownership helpers), `app/routers/{auth,users,wallet,chats,llm,account,tracker}.py`, `app/seed.py` (demo data and the grader account), `alembic/versions/`.
 Key frontend files: `src/lib/api.ts` (fetch wrapper, retries GETs while Render wakes), `src/components/{LlmConsole,CoverFlowSlider,WalletContainer,TopBar}.tsx`, `src/app/globals.css` (liquid-glass styles).
-Design: orange ("ember") and black palette, Inter only, white logo, Apple-style liquid-glass panels.
+Design: a blend of white, gray and black (no orange), Montserrat only (bold and italic mixed for emphasis), white logo, Apple-style liquid-glass panels.
 
 ## Commands
 

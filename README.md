@@ -64,7 +64,7 @@ Open **http://localhost:3000**. Register a new account, or log in with the gradi
 |---|---|---|
 | `NYUgrader` | `Courant2026!` | `2026` |
 
-On the login screen, type the username into the "Email or username" box. The PIN unlocks the wallet cards on the dashboard (click the orange eye).
+On the login screen, type the username into the "Email or username" box. The PIN unlocks the wallet cards on the dashboard (click the eye icon).
 
 ---
 

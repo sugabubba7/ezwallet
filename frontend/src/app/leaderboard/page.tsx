@@ -9,13 +9,13 @@ import { CAVEATS, CHARTS, LEADERBOARD, LEADERBOARD_AS_OF, type ChartSpec, type C
 
 const CONF: Record<Confidence, { label: string; cls: string }> = {
   disclosed: { label: "Disclosed by the company", cls: "bg-white/15 text-white" },
-  derived: { label: "Derived from a stated rate", cls: "bg-amber-400/20 text-amber-100" },
-  undisclosed: { label: "Not disclosed", cls: "bg-ember-600/40 text-ember-100" },
+  derived: { label: "Derived from a stated rate", cls: "bg-white/10 text-white/85 ring-1 ring-white/25" },
+  undisclosed: { label: "Not disclosed", cls: "bg-ember-700/60 text-ember-100" },
 };
 
 const fmtT = (t: number) => (t >= 1000 ? `${(t / 1000).toFixed(1)} quadrillion` : `${Math.round(t)} trillion`);
 
-const SLICE_COLORS = ["#ffffff", "#ff9a45", "#5b1d08", "#ffd9b8"];
+const SLICE_COLORS = ["#ffffff", "#c4c4ca", "#85858d", "#4a4a51"];
 
 /** Donut chart in plain SVG. Hovering (or focusing) a legend row highlights its slice. */
 function Donut({ spec }: { spec: ChartSpec }) {
@@ -113,7 +113,7 @@ export default function LeaderboardPage() {
   if (loading || !user) {
     return (
       <main className="grid min-h-screen place-items-center">
-        <Loader2 className="h-6 w-6 animate-spin text-white/50" />
+        <Loader2 className="h-6 w-6 animate-spin text-ink-950/50" />
       </main>
     );
   }
@@ -123,9 +123,9 @@ export default function LeaderboardPage() {
       <TopBar />
       <main className="mx-auto max-w-4xl space-y-6 px-4 pb-16 pt-8 sm:px-6">
         <div>
-          <p className="eyebrow">Market context</p>
-          <h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">LLM Leaderboard</h1>
-          <p className="mt-1 max-w-2xl text-sm text-white/60">
+          <p className="eyebrow !text-ink-950/55">Market context</p>
+          <h1 className="mt-1 text-2xl font-semibold text-ink-950 sm:text-3xl">LLM Leaderboard</h1>
+          <p className="mt-1 max-w-2xl text-sm text-ink-950/65">
             Which LLM provider processes the most tokens? Only some of it is public, so every row says how much to trust it. Compiled {LEADERBOARD_AS_OF}.
           </p>
         </div>

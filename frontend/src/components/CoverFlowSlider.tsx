@@ -176,8 +176,8 @@ export function CoverFlowSlider({ chats, activeId, onDelete }: Props) {
       aria-label="Chat session summaries"
     >
       <div className="flex items-center justify-between px-6 pt-5">
-        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-white">
-          <MessagesSquare className="h-4 w-4" /> Chat Archive
+        <h2 className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-white">
+          <MessagesSquare className="h-4 w-4" /> Chat <span className="font-medium">archive</span>
         </h2>
         <span className="chip bg-black/20 text-white/80">{n} sessions</span>
       </div>

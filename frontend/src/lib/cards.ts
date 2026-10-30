@@ -13,49 +13,49 @@ export const CATEGORY_META: Record<Category, { label: string; icon: LucideIcon }
 
 type Theme = { bg: string; text: string; sub: string; accent: string; iconBg: string };
 
-/** Card skins: orange shades and warm blacks only. */
+/** Card skins: grays, white and black only. */
 export const CARD_THEMES: Record<CardColor, Theme> = {
   ember: {
-    bg: "linear-gradient(120deg,#d9601c 0%,#ee7d2e 60%,#f79a4c 100%)",
+    bg: "linear-gradient(120deg,#2a2a2e 0%,#4a4a51 60%,#6b6b73 100%)",
     text: "#ffffff",
-    sub: "rgba(255,244,235,.8)",
-    accent: "#fff4eb",
+    sub: "rgba(245,245,247,.78)",
+    accent: "#f5f5f7",
     iconBg: "rgba(255,255,255,.2)",
   },
   amber: {
-    bg: "linear-gradient(90deg,#f7c089 0%,#f5a95e 100%)",
-    text: "#2a0f04",
-    sub: "#8a3a0c",
-    accent: "#9e3e12",
-    iconBg: "rgba(158,62,18,.14)",
+    bg: "linear-gradient(90deg,#e8e8ec 0%,#c9c9cf 100%)",
+    text: "#0b0b0c",
+    sub: "#46464d",
+    accent: "#2e2e33",
+    iconBg: "rgba(11,11,12,.1)",
   },
   cream: {
-    bg: "linear-gradient(120deg,#fff6ec 0%,#fbe6d0 100%)",
-    text: "#2a0f04",
-    sub: "#9e5a2e",
-    accent: "#c9551a",
-    iconBg: "rgba(201,85,26,.12)",
+    bg: "linear-gradient(120deg,#fafafb 0%,#e0e0e4 100%)",
+    text: "#0b0b0c",
+    sub: "#55555c",
+    accent: "#2e2e33",
+    iconBg: "rgba(11,11,12,.08)",
   },
   copper: {
-    bg: "linear-gradient(120deg,#b4602e 0%,#d8854a 100%)",
-    text: "#ffffff",
-    sub: "rgba(255,244,235,.78)",
-    accent: "#fff4eb",
-    iconBg: "rgba(255,255,255,.18)",
+    bg: "linear-gradient(120deg,#a9a9b1 0%,#8e8e96 100%)",
+    text: "#0b0b0c",
+    sub: "rgba(11,11,12,.72)",
+    accent: "#0b0b0c",
+    iconBg: "rgba(11,11,12,.12)",
   },
   rust: {
-    bg: "linear-gradient(120deg,#6e210a 0%,#a8380f 100%)",
-    text: "#fff4eb",
-    sub: "rgba(255,200,149,.85)",
-    accent: "#ffc895",
-    iconBg: "rgba(255,200,149,.16)",
+    bg: "linear-gradient(120deg,#3a3a40 0%,#17171a 100%)",
+    text: "#f5f5f7",
+    sub: "rgba(212,212,217,.85)",
+    accent: "#d4d4d9",
+    iconBg: "rgba(255,255,255,.14)",
   },
   noir: {
-    bg: "linear-gradient(120deg,#2a211b 0%,#120d0a 100%)",
-    text: "#fff4eb",
-    sub: "rgba(255,244,235,.6)",
-    accent: "#fb8a35",
-    iconBg: "rgba(251,138,53,.14)",
+    bg: "linear-gradient(120deg,#1c1c1f 0%,#0b0b0c 100%)",
+    text: "#f5f5f7",
+    sub: "rgba(245,245,247,.6)",
+    accent: "#b8b8bf",
+    iconBg: "rgba(255,255,255,.1)",
   },
 };
 
