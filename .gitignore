@@ -34,3 +34,7 @@ traces/scratch/
 traces/*.out
 traces/*.pid
 reports/latest.md
+
+# Local-only Claude agents and private workspace files (never published)
+.claude/agents/
+ezwallet-private/
