@@ -18,7 +18,7 @@ function Step({ label, text, tone }: { label: string; text: string; tone: "ask" 
       }`}
     >
       <div className="text-[13px] font-extrabold uppercase tracking-wider text-[#4A4A51]">{label}</div>
-      <div className={`mt-2 text-base leading-normal ${tone === "ask" ? "italic" : "font-semibold"}`}>{text}</div>
+      <div className={`mt-2 text-base leading-normal ${tone === "ask" ? "" : "font-semibold"}`}>{text}</div>
     </div>
   );
 }
@@ -55,7 +55,7 @@ export default function Home() {
           <br />
           <span className="bg-gradient-to-r from-[#0B0B0C] to-[#8E8E96] bg-clip-text pr-1 font-extrabold italic text-transparent">pivot anywhere.</span>
         </h1>
-        <p className="m-0 max-w-[560px] text-balance text-lg leading-normal text-[#4A4A51] sm:text-xl">Your context follows you from one AI to the <em className="font-bold text-[#0B0B0C]">next</em>.</p>
+        <p className="m-0 max-w-[560px] text-balance text-lg leading-normal text-[#4A4A51] sm:text-xl">Your context follows you from one AI to the <strong className="font-bold text-[#0B0B0C]">next</strong>.</p>
         <a href={EXTENSION_URL} target="_blank" rel="noreferrer" className={`${darkButton} min-h-[52px] px-[30px] text-[17px]`}>
           Add to Chrome
         </a>
@@ -70,11 +70,11 @@ export default function Home() {
 
       {/* how it works: a wallet that opens as you scroll */}
       <section>
-        <h2 className="mx-auto mb-14 max-w-[760px] px-6 text-center text-[34px] font-extrabold tracking-[-0.03em]">How it <em className="font-semibold">works</em></h2>
+        <h2 className="mx-auto mb-14 max-w-[760px] px-6 text-center text-[34px] font-extrabold tracking-[-0.03em]">How it <span className="font-medium">works</span></h2>
         <WalletScroll />
       </section>
 
-      <p className="mx-auto max-w-[760px] px-6 pb-14 pt-6 text-center text-sm italic text-[#5E5E66]">Stays in your browser. <strong className="font-bold not-italic">Gone in five minutes.</strong></p>
+      <p className="mx-auto max-w-[760px] px-6 pb-14 pt-6 text-center text-sm text-[#5E5E66]">Stays in your browser. <strong className="font-bold text-[#26262A]">Gone in five minutes.</strong></p>
     </div>
   );
 }

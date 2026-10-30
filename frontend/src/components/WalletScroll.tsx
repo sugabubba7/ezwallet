@@ -33,7 +33,7 @@ function CardFace({
   };
   return (
     <div className={cls} style={style}>
-      <div className="text-[20px] font-extrabold italic leading-[1.3] tracking-tight">{title}</div>
+      <div className="text-[20px] font-extrabold leading-[1.3] tracking-tight">{title}</div>
       <div className="mt-1.5 text-[14px] leading-[1.45] text-[#26262A]">{line}</div>
     </div>
   );
@@ -113,7 +113,7 @@ export function WalletScroll() {
           {/* scroll prompt */}
           <div
             className="ezw-prompt"
-            style={{ position: "absolute", left: 0, right: 0, bottom: 28, zIndex: 9, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: "#26262A", fontSize: 15, fontWeight: 600, fontStyle: "italic" }}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 28, zIndex: 9, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: "#26262A", fontSize: 15, fontWeight: 600 }}
           >
             Scroll to open
             <svg className="ezw-chev" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#26262A" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
