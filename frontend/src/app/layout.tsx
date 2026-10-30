@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { PageBackdrop } from "@/components/PageBackdrop";
 import { AuthProvider } from "@/lib/auth";
 
-const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const sans = Montserrat({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "EZ Wallet: prompt once, pivot anywhere",

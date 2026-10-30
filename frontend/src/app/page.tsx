@@ -17,8 +17,8 @@ function Step({ label, text, tone }: { label: string; text: string; tone: "ask" 
         tone === "answer" ? "border border-[#0B0B0C]" : "border border-[#CBCBD1]"
       }`}
     >
-      <div className="text-[13px] font-semibold text-[#4A4A51]">{label}</div>
-      <div className="mt-2 text-base leading-normal">{text}</div>
+      <div className="text-[13px] font-extrabold uppercase tracking-wider text-[#4A4A51]">{label}</div>
+      <div className={`mt-2 text-base leading-normal ${tone === "ask" ? "italic" : "font-semibold"}`}>{text}</div>
     </div>
   );
 }
@@ -29,7 +29,7 @@ export default function Home() {
     <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-b from-[#E6E6E9] via-[#DCDCE0] to-[#E6E6E9] text-[#0B0B0C] [color-scheme:light]">
       {/* nav */}
       <header className="mx-auto flex max-w-[1000px] items-center justify-between gap-3 px-6 py-7">
-        <Logo tone="dark" />
+        <Logo tone="dark" wordmarkOnly large />
         <div className="flex items-center gap-3 sm:gap-5">
           {user ? (
             <Link href="/dashboard" className={`${darkButton} min-h-[44px] px-4 text-sm sm:px-[22px] sm:text-[15px]`}>
@@ -50,12 +50,12 @@ export default function Home() {
 
       {/* hero */}
       <section className="mx-auto flex max-w-[760px] flex-col items-center gap-7 px-6 pb-[72px] pt-[70px] text-center sm:pt-[110px]">
-        <h1 className="m-0 text-[44px] font-bold leading-[1.04] tracking-[-0.035em] sm:text-[68px]">
+        <h1 className="m-0 text-[42px] font-extrabold leading-[1.04] tracking-[-0.04em] sm:text-[64px]">
           Prompt once,
           <br />
-          <span className="bg-gradient-to-r from-[#0B0B0C] to-[#8E8E96] bg-clip-text text-transparent">pivot anywhere.</span>
+          <span className="bg-gradient-to-r from-[#0B0B0C] to-[#8E8E96] bg-clip-text pr-1 font-extrabold italic text-transparent">pivot anywhere.</span>
         </h1>
-        <p className="m-0 max-w-[480px] text-xl leading-normal text-[#4A4A51]">Your context follows you from one AI to the next.</p>
+        <p className="m-0 max-w-[560px] text-balance text-lg leading-normal text-[#4A4A51] sm:text-xl">Your context follows you from one AI to the <em className="font-bold text-[#0B0B0C]">next</em>.</p>
         <a href={EXTENSION_URL} target="_blank" rel="noreferrer" className={`${darkButton} min-h-[52px] px-[30px] text-[17px]`}>
           Add to Chrome
         </a>
@@ -70,11 +70,11 @@ export default function Home() {
 
       {/* how it works: a wallet that opens as you scroll */}
       <section>
-        <h2 className="mx-auto mb-14 max-w-[760px] px-6 text-center text-[32px] font-bold tracking-tight">How it works</h2>
+        <h2 className="mx-auto mb-14 max-w-[760px] px-6 text-center text-[34px] font-extrabold tracking-[-0.03em]">How it <em className="font-semibold">works</em></h2>
         <WalletScroll />
       </section>
 
-      <p className="mx-auto max-w-[760px] px-6 pb-14 pt-6 text-center text-sm text-[#5E5E66]">Stays in your browser. Gone in five minutes.</p>
+      <p className="mx-auto max-w-[760px] px-6 pb-14 pt-6 text-center text-sm italic text-[#5E5E66]">Stays in your browser. <strong className="font-bold not-italic">Gone in five minutes.</strong></p>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import type { Config } from "tailwindcss";
 
-/** One typeface (Inter) and one palette: orange shades + warm blacks. */
+/** One typeface (Montserrat) and one palette: orange shades + warm blacks. */
 export default {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
