@@ -1,5 +1,5 @@
 /**
- * Wordmark in Montserrat ExtraBold Italic, optionally with the wallet mark beside it.
+ * Wordmark in Montserrat SemiBold Italic, optionally with the wallet mark beside it.
  * White by default, black with tone="dark". `wordmarkOnly` drops the mark and
  * `large` is for page headers.
  */
@@ -27,7 +27,7 @@ export function Logo({
           }}
         />
       )}
-      <span className={`font-extrabold italic leading-none tracking-[-0.04em] ${large ? "text-[34px]" : "text-[21px]"}`}>ezwallet</span>
+      <span className={`font-semibold italic leading-none tracking-[-0.04em] ${large ? "text-[34px]" : "text-[21px]"}`}>ezwallet</span>
     </div>
   );
 }
