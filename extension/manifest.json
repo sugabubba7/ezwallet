@@ -34,5 +34,17 @@
       "48": "icons/wallet-dark-48.png",
       "128": "icons/wallet-dark-128.png"
     }
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/wallet-dark-48.png"
+      ],
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*",
+        "https://claude.ai/*"
+      ]
+    }
+  ]
 }

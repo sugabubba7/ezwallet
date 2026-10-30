@@ -129,7 +129,7 @@
     const mins = Math.max(0, Math.round((Date.now() - ctx.savedAt) / 60000));
     const el = document.createElement("div");
     el.id = "ezw-panel";
-    el.innerHTML = `<div class="ezw-head"><span class="ezw-title">EZ Wallet</span><button class="ezw-x" title="Dismiss">✕</button></div>
+    el.innerHTML = `<div class="ezw-head"><span class="ezw-title"><img class="ezw-logo" alt="" src="${chrome.runtime.getURL("icons/wallet-dark-48.png")}">EZ Wallet</span><button class="ezw-x" title="Dismiss">✕</button></div>
       <div class="ezw-sub">From ${ctx.source}, ${mins === 0 ? "just now" : mins + " min ago"}${ctx.topic ? ": " + ctx.topic.replace(/</g, "&lt;") : ""}</div>`;
     const add = (label, cls, fn) => {
       const b = document.createElement("button");
