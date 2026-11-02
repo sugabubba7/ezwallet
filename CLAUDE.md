@@ -74,3 +74,8 @@ Local login: `NYUgrader` / `Courant2026!`, vault PIN `2026` (created on startup)
 - `reports/run2.md` on main is labelled PARTIAL (search budget exhausted). Re-run it if a complete run 2 is needed.
 - Add the live Vercel URL to the README.
 - Build: the Gemini Takeout importer, then the extension (personal-data warning and "Save this fix" first).
+
+## Future goals
+
+- **Switch-aware extension.** The extension reads your saved context and chats and, when you switch to another LLM, suggests what to bring along (the right cards, a short recap) so you do not re-explain yourself.
+- **Collaborative team software.** A shared version of the wallet for teams: shared cards with per-person access, still encrypted and opt-in. Aicoo already owns the workspace side (see `docs/EZ_WALLET_VS_AICOO.md`), so this comes after the personal product works.
