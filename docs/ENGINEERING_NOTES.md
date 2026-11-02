@@ -78,3 +78,15 @@ People paste the same sensitive context into LLM chats again and again: their wr
 ## 7. Reflection
 
 See [JOURNAL.md](../JOURNAL.md) for the reflection. Next steps: passkeys for vault unlock, a per-card access audit log, MultiFernet key rotation, streaming responses, and login rate limiting.
+
+---
+
+## Appendix: why the live competitor tracker fell short (2026-11-02)
+
+The tracker could not produce a complete report on any free tier this week. The cause was **budget**, not code:
+
+- **OpenRouter:** the key's daily limit is $0, so the first call is rejected (403). The `:free` model was also withdrawn.
+- **Gemini:** `gemini-2.5-flash` is closed to new users, and the project's prepaid credits are depleted (402).
+- **Groq (free tier):** the 7k-token request cap forces `max_request_tokens: 5600` and `max_article_chars: 2500`, so the agent sees only tiny excerpts. Runs 25 and 26 ended PARTIAL (`search budget exhausted`, then `the model kept requesting tools whose budget is exhausted`). Raising `max_searches` from 4 to 6 did not help, so that change was reverted.
+
+A complete run needs a model with a larger context window and a funded key. Until then the Competitors page shows a hand-researched profile of the top 5 competitors (`frontend/src/lib/competitors.ts`). The live view is kept at `/tracker/live` and the backend and tracker code are unchanged.
