@@ -1,6 +1,6 @@
 # AGENT.md: how this tracker actually works
 
-System: [tracker/](tracker/) (about 2,000 lines of Python, no agent framework), policy in [config.yaml](config.yaml), memory in the EZ Wallet backend. Numbers in sections 2 and 5 were measured from this system's own traces: the graded run 1 (`traces/run1.jsonl`, 2026-10-05, deployed backend, `qwen/qwen3.8-27b:free` via OpenRouter) and, where stated, from development runs on Groq's free tier. Regenerate any of them with `python -m tracker.trace_stats traces/run1.jsonl`.
+System: [tracker/](tracker/) (about 2,000 lines of Python, no agent framework), policy in [config.yaml](config.yaml), memory in the Relay backend. Numbers in sections 2 and 5 were measured from this system's own traces: the graded run 1 (`traces/run1.jsonl`, 2026-10-05, deployed backend, `qwen/qwen3.8-27b:free` via OpenRouter) and, where stated, from development runs on Groq's free tier. Regenerate any of them with `python -m tracker.trace_stats traces/run1.jsonl`.
 
 ## 1. Workflow vs. agent
 
@@ -29,7 +29,7 @@ Graded run 1 (`traces/run1.jsonl`): 6 steps, 6 articles fetched, a complete top 
 | OpenRouter (model) | 6 | 54.2 s | steps 1 to 4 gather evidence, steps 5 and 6 write the report (see below) |
 | Tavily (search) | 4 | 11.7 s | 2 searches in step 1, 2 in step 2 (4 credits) |
 | The open web (`fetch_article`) | 6 | 5.3 s | 4 pages fetched in parallel in step 3, 2 more in step 4 |
-| EZ Wallet backend (Render) | 6 | 5.5 s | health, login, load state, start run, save run, attach report |
+| Relay backend (Render) | 6 | 5.5 s | health, login, load state, start run, save run, attach report |
 | **Total** | **22** | **100 s wall clock** | |
 
 **Where the time went:** the model, again. Of the 100 s, 23 s was the agent asleep in backoff after OpenRouter's free upstream answered 429 three times (5.5 s, 12.1 s and 5.6 s waits, all in the trace), and about 54 s was the model itself. Search, fetching and the backend together were about 22 s. Two of the six model calls were `finish`: the first (step 5, 2,703 output tokens) was **rejected by my validator** because the summary of development 2 stated "2026", which does not appear in its cited source; the second (step 6) fixed it and was accepted. That one retry is the provenance check doing its job, and it cost about 35 s. On my earlier development runs against Groq's free tier the picture was the opposite: one run spent 201 of 224 seconds asleep waiting out Groq's 8,000 tokens-per-minute limit. The tracker is bound by whichever quota or model is slowest, which is why waiting is logged as its own `retry` lines.

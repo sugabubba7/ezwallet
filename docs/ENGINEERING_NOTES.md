@@ -1,4 +1,4 @@
-# Engineering Notes: EZ Wallet (detailed design record)
+# Engineering Notes: Relay (detailed design record)
 
 > The detailed design record behind [JOURNAL.md](../JOURNAL.md): decisions, alternatives, security layers and limitations.
 

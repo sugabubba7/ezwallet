@@ -1,4 +1,4 @@
-"""The tracker's memory. It is only ever read and written through the EZ Wallet backend API,
+"""The tracker's memory. It is only ever read and written through the Relay backend API,
 never by connecting to the database."""
 import time
 from collections.abc import Callable

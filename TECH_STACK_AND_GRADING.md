@@ -1,4 +1,4 @@
-# EZ Wallet: Tech Stack & Grading Map
+# Relay: Tech Stack & Grading Map
 
 Maps each item of the **Assignment 1** grading table to where it's met and how to check it yourself.
 Repo: https://github.com/sugabubba7/ezwallet · Run instructions: [README.md](README.md)

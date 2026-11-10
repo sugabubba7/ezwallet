@@ -1,4 +1,4 @@
-# EZ Wallet: project context
+# Relay: project context
 
 The longer story behind `CLAUDE.md`: what has been built, what went wrong, what the research says, and what comes next. Last updated 2026-10-26.
 
@@ -14,7 +14,7 @@ The longer story behind `CLAUDE.md`: what has been built, what went wrong, what 
 |---|---|
 | Encrypted, PIN-locked vault of context cards | **Built** |
 | Send a prompt to an AI with a chosen card attached, with zero retention | **Built** (Gemini) |
-| Chat summaries: date/time and how many messages were exchanged | **Built** (for chats made in EZ Wallet, plus sample data) |
+| Chat summaries: date/time and how many messages were exchanged | **Built** (for chats made in Relay, plus sample data) |
 | Import chats from other AIs | Planned: Gemini Takeout import first |
 | Live tracking of AI usage across sites | Planned: browser extension |
 | Warning before personal data is sent | Planned: extension, runs on the device |
@@ -31,7 +31,7 @@ The longer story behind `CLAUDE.md`: what has been built, what went wrong, what 
 - Account: change email or password, delete the account.
 - Tracker page: competitor reports (visible when logged in as NYUgrader).
 
-**What it doesn't do yet:** connect to ChatGPT, Claude or the Gemini app, or import their history. The carousel shows seeded sample chats and chats made inside EZ Wallet.
+**What it doesn't do yet:** connect to ChatGPT, Claude or the Gemini app, or import their history. The carousel shows seeded sample chats and chats made inside Relay.
 
 **Known weak spots:** the free Render backend sleeps, so the first load takes 30–60 s. The look needs a polish pass after several quick restyles, and the sample data makes it feel like a demo.
 
@@ -52,7 +52,7 @@ The longer story behind `CLAUDE.md`: what has been built, what went wrong, what 
 
 Google offers no "read my Gemini chats" API for outside apps. The Gemini API is separate from the Gemini app. The routes are:
 
-1. **Google Takeout** (start here): My Activity → Gemini Apps, as JSON, from a **dummy account** with Gemini Apps Activity turned on. Upload it to EZ Wallet, group turns into conversations by time gaps, and store metadata only by default.
+1. **Google Takeout** (start here): My Activity → Gemini Apps, as JSON, from a **dummy account** with Gemini Apps Activity turned on. Upload it to Relay, group turns into conversations by time gaps, and store metadata only by default.
 2. **The browser extension**, for live sync later.
 3. **Google Data Portability API**: official OAuth, but region-limited (mainly EU/UK), needs Google's verification, and Gemini support isn't confirmed.
 

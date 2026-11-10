@@ -1,4 +1,4 @@
-# Deploying EZ Wallet on free tiers
+# Deploying Relay on free tiers
 
 | Piece | Service | Free-tier notes |
 |---|---|---|
