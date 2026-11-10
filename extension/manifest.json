@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Relay - Context Handoff",
   "version": "0.1.0",
-  "description": "Carries the last few minutes of your AI conversation to the next AI tool. Stays in your browser.",
+  "description": "Records your AI chats while the browser is open and carries them to the next AI tool. Stays in your browser; erased when it closes.",
   "permissions": [
     "storage"
   ],
@@ -10,8 +10,12 @@
     {
       "matches": [
         "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
         "https://gemini.google.com/*",
-        "https://claude.ai/*"
+        "https://claude.ai/*",
+        "https://copilot.microsoft.com/*",
+        "https://grok.com/*",
+        "https://www.perplexity.ai/*"
       ],
       "js": [
         "content.js"
@@ -42,9 +46,16 @@
       ],
       "matches": [
         "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
         "https://gemini.google.com/*",
-        "https://claude.ai/*"
+        "https://claude.ai/*",
+        "https://copilot.microsoft.com/*",
+        "https://grok.com/*",
+        "https://www.perplexity.ai/*"
       ]
     }
-  ]
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
 }
