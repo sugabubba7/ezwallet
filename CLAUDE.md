@@ -2,9 +2,9 @@
 
 Project memory for Claude Code. Read this first, then `docs/PROJECT_CONTEXT.md` for the full story.
 
-## What EZ Wallet is
+## What Relay is
 
-A personal **data wallet for AI**. People use many AI tools (ChatGPT, Claude, Gemini, Cursor…) and each one is a silo: you re-explain yourself on every switch, and your personal data piles up in each company's memory. EZ Wallet is the one place that:
+A personal **data wallet for AI**. People use many AI tools (ChatGPT, Claude, Gemini, Cursor…) and each one is a silo: you re-explain yourself on every switch, and your personal data piles up in each company's memory. Relay is the one place that:
 
 1. lists all your AI chats across tools as summaries (date/time, how many messages were exchanged);
 2. keeps your personal context in an encrypted, PIN-locked vault and shares only what you pick with whichever AI you use;

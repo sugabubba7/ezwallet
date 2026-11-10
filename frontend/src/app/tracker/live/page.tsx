@@ -162,7 +162,7 @@ export default function TrackerPage() {
       <main className="mx-auto max-w-5xl space-y-6 px-4 pb-16 pt-8 sm:px-6">
         <div>
           <p className="eyebrow !text-ink-950/55">Agentic tracker</p>
-          <h1 className="mt-1 text-2xl font-semibold text-ink-950 sm:text-3xl">Current competitors to EZ Wallet</h1>
+          <h1 className="mt-1 text-2xl font-semibold text-ink-950 sm:text-3xl">Current competitors to Relay</h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-950/65">
             A research agent searches the web, ranks the top developments and remembers what it has already seen, so each run reports only what changed.
           </p>

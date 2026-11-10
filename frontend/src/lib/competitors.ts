@@ -27,7 +27,7 @@ export const COMPETITORS: Competitor[] = [
     ],
     pricing: "Free $0 (300 credits/mo) · Pro $15/mo · Max $200/mo · Team $15/person/mo (min 3).",
     privacy: "Checks access on every request. The public page does not say where data is stored, for how long, or how it is encrypted.",
-    overlap: "Both connect to coding agents and “remember” things. Aicoo is a shared work hub; EZ Wallet is a private personal vault.",
+    overlap: "Both connect to coding agents and “remember” things. Aicoo is a shared work hub; Relay is a private personal vault.",
   },
   {
     name: "MemoryPlugin",
@@ -42,7 +42,7 @@ export const COMPETITORS: Competitor[] = [
     ],
     pricing: "Core $89/yr · Pro $180/yr · monthly and lifetime options; 7-day trial, 14-day refund.",
     privacy: "Encrypted in transit and at rest; says it never sells data or trains on it; export and delete anytime.",
-    overlap: "The closest product to EZ Wallet’s core idea. The server holds your memories; no PIN-locked vault or warn-before-you-send check is advertised.",
+    overlap: "The closest product to Relay’s core idea. The server holds your memories; no PIN-locked vault or warn-before-you-send check is advertised.",
   },
   {
     name: "Mem0",

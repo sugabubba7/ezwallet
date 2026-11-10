@@ -1,6 +1,6 @@
-# EZ Wallet
+# Relay
 
-**EZ Wallet is a personal "data wallet" for AI chats.** You keep sensitive context (your writing style, project notes, health info) in a PIN-locked, encrypted vault of cards, attach a card only when a prompt needs it, and send it to Google Gemini through a proxy that stores no prompts or replies.
+**Relay is a personal "data wallet" for AI chats.** You keep sensitive context (your writing style, project notes, health info) in a PIN-locked, encrypted vault of cards, attach a card only when a prompt needs it, and send it to Google Gemini through a proxy that stores no prompts or replies.
 
 It's a FastAPI backend with a Next.js frontend, using PostgreSQL (Neon) or SQLite.
 
@@ -215,7 +215,7 @@ frontend/
 
 ## 8. Assignment 1B: the agentic competitor tracker
 
-An agent that finds the top **K = 5** developments about **competitors to EZ Wallet** (AI memory vaults, context managers, privacy-first LLM gateways), ranks them, cites a source and a verbatim quote for each, and remembers what it has seen. Run it again and it reports **New since last run → Still in top K → Dropped**. Results appear on the **Competitors** page of this app (behind the normal login).
+An agent that finds the top **K = 5** developments about **competitors to Relay** (AI memory vaults, context managers, privacy-first LLM gateways), ranks them, cites a source and a verbatim quote for each, and remembers what it has seen. Run it again and it reports **New since last run → Still in top K → Dropped**. Results appear on the **Competitors** page of this app (behind the normal login).
 
 The agent loop is hand-written ([tracker/agent.py](tracker/agent.py)); there is no agent framework. Policy lives in [config.yaml](config.yaml). [AGENT.md](AGENT.md) answers the design questions.
 

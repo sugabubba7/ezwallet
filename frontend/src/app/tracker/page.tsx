@@ -23,7 +23,7 @@ export default function CompetitorsPage() {
       <main className="mx-auto max-w-5xl space-y-6 px-4 pb-16 pt-8 sm:px-6">
         <div>
           <p className="eyebrow !text-ink-950/55">Competitors</p>
-          <h1 className="mt-1 text-2xl font-semibold text-ink-950 sm:text-3xl">Top 5 competitors to EZ Wallet</h1>
+          <h1 className="mt-1 text-2xl font-semibold text-ink-950 sm:text-3xl">Top 5 competitors to Relay</h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-950/65">
             Researched by hand from each company’s public site on {COMPETITORS_CHECKED}. Prices change, so re-check before relying on them. The live agent
             report is still available <Link href="/tracker/live" className="underline">here</Link>.
@@ -69,7 +69,7 @@ export default function CompetitorsPage() {
               </div>
               <div className="rounded-2xl bg-black/20 p-4">
                 <dt className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/50">
-                  <Radar className="h-3.5 w-3.5" /> How it relates to EZ Wallet
+                  <Radar className="h-3.5 w-3.5" /> How it relates to Relay
                 </dt>
                 <dd className="mt-1 text-white/80">{c.overlap}</dd>
               </div>

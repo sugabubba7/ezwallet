@@ -1,10 +1,10 @@
-# EZ Wallet extension (prototype)
+# Relay extension (prototype)
 
 Hands the last 5 minutes of an AI chat to another AI tool. ChatGPT, Gemini and Claude pages.
 
 - Reads the chat on the page, summarizes it on the device, keeps it in `chrome.storage.local` for 5 minutes.
 - On a different AI site a panel appears: "Paste context" plus suggestion chips built from the previous chat.
-- Nothing is sent to the EZ Wallet server (zero retention rule).
+- Nothing is sent to the Relay server (zero retention rule).
 
 ## Try it
 1. Chrome -> `chrome://extensions` -> Developer mode -> Load unpacked -> select this `extension/` folder.

@@ -19,7 +19,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="EZ Wallet API",
+    title="Relay API",
     description="LLM Data Wallet with an encrypted context vault and a zero-data-retention Gemini proxy.",
     version="1.0.0",
     lifespan=lifespan,

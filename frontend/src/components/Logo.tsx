@@ -1,7 +1,7 @@
 /**
- * Wordmark in Montserrat SemiBold Italic, optionally with the wallet mark beside it.
- * White by default, black with tone="dark". `wordmarkOnly` drops the mark and
- * `large` is for page headers.
+ * Wordmark "relay" in Montserrat SemiBold Italic, optionally with the wallet mark beside it.
+ * White by default, black with tone="dark". `wordmarkOnly` drops the mark
+ * and `large` is for page headers.
  */
 export function Logo({
   tone = "light",
@@ -27,7 +27,12 @@ export function Logo({
           }}
         />
       )}
-      <span className={`font-semibold italic leading-none tracking-[-0.04em] ${large ? "text-[34px]" : "text-[21px]"}`}>ezwallet</span>
+      <span
+        aria-label="relay"
+        className={`font-semibold italic leading-none tracking-[-0.04em] ${large ? "text-[34px]" : "text-[21px]"}`}
+      >
+        <span aria-hidden>relay</span>
+      </span>
     </div>
   );
 }

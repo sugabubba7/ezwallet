@@ -1,4 +1,4 @@
-// EZ Wallet context handoff (prototype).
+// Relay context handoff (prototype).
 // Reads the live chat on the page, keeps a short summary in chrome.storage for 5 minutes,
 // and offers it on a different AI site. Nothing leaves the browser.
 (() => {
@@ -102,7 +102,7 @@
   // ---- build prompts ----
   function contextBlock(ctx) {
     const lines = ctx.messages.map((m) => `${m.role === "user" ? "Me" : ctx.source}: ${m.text}`);
-    return `Context from my recent ${ctx.source} conversation (via EZ Wallet):\n${lines.join("\n")}\n\n`;
+    return `Context from my recent ${ctx.source} conversation (via Relay):\n${lines.join("\n")}\n\n`;
   }
 
   function suggestions(ctx) {
@@ -118,7 +118,7 @@
 
   function insert(text) {
     const box = site.input();
-    if (!box) return alert("EZ Wallet: couldn't find the chat box on this page.");
+    if (!box) return alert("Relay: couldn't find the chat box on this page.");
     box.focus();
     document.execCommand("insertText", false, text);
   }
@@ -129,7 +129,7 @@
     const mins = Math.max(0, Math.round((Date.now() - ctx.savedAt) / 60000));
     const el = document.createElement("div");
     el.id = "ezw-panel";
-    el.innerHTML = `<div class="ezw-head"><span class="ezw-title"><img class="ezw-logo" alt="" src="${chrome.runtime.getURL("icons/wallet-dark-48.png")}">EZ Wallet</span><button class="ezw-x" title="Dismiss">✕</button></div>
+    el.innerHTML = `<div class="ezw-head"><span class="ezw-title"><img class="ezw-logo" alt="" src="${chrome.runtime.getURL("icons/wallet-dark-48.png")}">Relay</span><button class="ezw-x" title="Dismiss">✕</button></div>
       <div class="ezw-sub">From ${ctx.source}, ${mins === 0 ? "just now" : mins + " min ago"}${ctx.topic ? ": " + ctx.topic.replace(/</g, "&lt;") : ""}</div>`;
     const add = (label, cls, fn) => {
       const b = document.createElement("button");

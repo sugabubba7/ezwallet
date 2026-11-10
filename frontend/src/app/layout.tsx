@@ -7,7 +7,7 @@ import { AuthProvider } from "@/lib/auth";
 const sans = Montserrat({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "EZ Wallet: prompt once, pivot anywhere",
+  title: "Relay: prompt once, pivot anywhere",
   description: "Carry your context from one AI tool to the next. Your chats stay in your browser.",
 };
 

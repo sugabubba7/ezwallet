@@ -1,8 +1,11 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
-import { WalletScroll } from "@/components/WalletScroll";
+import { FeatureGrid } from "@/components/FeatureGrid";
+import { RelayHero } from "@/components/RelayHero";
+import { HandsFinale } from "@/components/HandsFinale";
 import { useAuth } from "@/lib/auth";
 
 const EXTENSION_URL = "https://github.com/sugabubba7/ezwallet/tree/main/extension";
@@ -10,23 +13,11 @@ const EXTENSION_URL = "https://github.com/sugabubba7/ezwallet/tree/main/extensio
 const darkButton =
   "inline-flex items-center justify-center rounded-full bg-gradient-to-b from-[#2A2A2E] to-[#0B0B0C] font-semibold text-white";
 
-function Step({ label, text, tone }: { label: string; text: string; tone: "ask" | "answer" }) {
-  return (
-    <div
-      className={`box-border min-w-0 flex-1 basis-[280px] rounded-[20px] bg-gradient-to-br from-[#EFEFF1] to-[#E3E3E7] p-[22px] ${
-        tone === "answer" ? "border border-[#0B0B0C]" : "border border-[#CBCBD1]"
-      }`}
-    >
-      <div className="text-[13px] font-extrabold uppercase tracking-wider text-[#4A4A51]">{label}</div>
-      <div className={`mt-2 text-base leading-normal ${tone === "ask" ? "" : "font-semibold"}`}>{text}</div>
-    </div>
-  );
-}
-
 export default function Home() {
   const { user } = useAuth();
+  const scrollRef = useRef<HTMLDivElement>(null);
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-b from-[#E6E6E9] via-[#DCDCE0] to-[#E6E6E9] text-[#0B0B0C] [color-scheme:light]">
+    <div ref={scrollRef} className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-b from-[#E6E6E9] via-[#DCDCE0] to-[#E6E6E9] text-[#0B0B0C] [color-scheme:light]">
       {/* nav */}
       <header className="mx-auto flex max-w-[1000px] items-center justify-between gap-3 px-6 py-7">
         <Logo tone="dark" wordmarkOnly large />
@@ -61,18 +52,19 @@ export default function Home() {
         </a>
       </section>
 
-      {/* one visual */}
-      <section className="mx-auto flex max-w-[760px] flex-wrap items-center justify-center gap-5 px-6 pb-[110px]">
-        <Step tone="ask" label="ChatGPT" text="I have pasta, garlic and tomatoes. What can I make?" />
-        <div aria-hidden className="hidden h-0.5 w-10 flex-none sm:block bg-gradient-to-r from-[#B8B8BF] to-[#0B0B0C]" />
-        <Step tone="answer" label="Gemini" text="Find olive oil and basil near me" />
+      {/* interactive demo */}
+      <section className="px-6 pb-[90px]">
+        <RelayHero />
       </section>
 
-      {/* how it works: a wallet that opens as you scroll */}
-      <section>
-        <h2 className="mx-auto mb-14 max-w-[760px] px-6 text-center text-[34px] font-extrabold tracking-[-0.03em]">How it <span className="font-medium">works</span></h2>
-        <WalletScroll />
+      {/* what you get */}
+      <section className="pb-[110px]">
+        <h2 className="mx-auto mb-12 max-w-[760px] px-6 text-center text-[34px] font-extrabold tracking-[-0.03em]">One place for <span className="font-medium italic">your context</span></h2>
+        <FeatureGrid />
       </section>
+
+      {/* two hands meet as you scroll */}
+      <HandsFinale scrollRef={scrollRef} href={EXTENSION_URL} />
 
       <p className="mx-auto max-w-[760px] px-6 pb-14 pt-6 text-center text-sm text-[#5E5E66]">Stays in your browser. <strong className="font-bold text-[#26262A]">Gone in five minutes.</strong></p>
     </div>
