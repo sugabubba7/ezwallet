@@ -48,7 +48,15 @@ async function list() {
     .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
+chrome.runtime.onMessage.addListener((msg, sender, reply) => {
+  if (msg.type === "badge") {
+    // Shows on the toolbar icon for that tab: how many messages Relay can read there.
+    if (sender.tab) {
+      chrome.action.setBadgeText({ tabId: sender.tab.id, text: String(msg.count) });
+      chrome.action.setBadgeBackgroundColor({ tabId: sender.tab.id, color: msg.count ? "#2A2A2E" : "#B00020" });
+    }
+    return false;
+  }
   serial(async () => {
     if (msg.type === "save") return void (await save(msg.conv));
     if (msg.type === "load") return load(msg.host, msg.id);

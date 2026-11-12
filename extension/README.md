@@ -6,13 +6,14 @@ ChatGPT, Gemini, Claude, Copilot, Grok and Perplexity pages.
 - A content script reads the chat on the page and sends it to the background worker, which keeps it in `chrome.storage.session`.
 - That store lives in memory only: a page reload keeps it, quitting the browser erases it. Closing the last browser window clears it too (macOS keeps the browser running with no windows).
 - It holds the whole conversation, up to about 8 MB. Past that, the least recently updated conversations are dropped.
-- On a different AI site a panel appears: "Paste context" plus suggestion chips built from the latest chat on another site.
+- On a different AI site a panel appears: "Paste summary" plus suggestion chips built from the latest chat on another site.
+- What gets pasted is a summary, not the transcript, and it never names the AI it came from (brand names are scrubbed, roles are just "Me" and "Assistant"). The summary comes from Chrome's built-in on-device Summarizer when its model is already installed, and otherwise from a rule-based summary built on the device (goal, questions asked, key points, where it stopped).
 - Nothing is sent to the Relay server (zero retention rule).
 
 ## Try it
 1. Chrome -> `chrome://extensions` -> Developer mode -> Load unpacked -> select this `extension/` folder.
 2. Chat on chatgpt.com (ask for a list, e.g. pasta ideas from your pantry), wait ~2 seconds.
-3. Open gemini.google.com in another tab. The panel appears within ~3 seconds. Reload the first tab: the chat is still recorded.
+3. Open gemini.google.com in another tab. The panel appears within ~3 seconds. Click "Paste summary". Reload the first tab: the chat is still recorded.
 
 Tests for the storage worker: `node --test extension/tests`.
 

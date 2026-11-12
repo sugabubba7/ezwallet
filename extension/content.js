@@ -7,17 +7,26 @@
   const MAX_CHARS = 1200;
 
   const liTexts = (el) => [...el.querySelectorAll("li")].map((li) => li.innerText.trim());
-  const pick = (el, role) => ({ role, text: el.innerText.trim(), li: liTexts(el) });
+  const pick = (el, role) => ({ role, text: el.innerText.replace(/^(ChatGPT said|You said):\s*/i, "").trim(), li: liTexts(el) });
 
   // Page selectors are not an official API and break when the sites change. ChatGPT, Gemini
-  // and Claude carry over from the first prototype; Copilot, Grok and Perplexity are best
-  // guesses that have not been tested on the live sites yet.
+  // and Claude were cross-checked against the open-source Clio extension's 2026-10 selectors;
+  // Copilot, Grok and Perplexity are best guesses that have not been tested on the live sites.
+  // ChatGPT changed its markup in 2026-10: messages are now divs whose
+  // data-chatgpt-search-unit-key ends in ":user" or ":assistant". The older
+  // data-message-author-role attribute is kept as a fallback.
   const chatgpt = {
     name: "ChatGPT",
     messages: () =>
-      [...document.querySelectorAll("[data-message-author-role]")].map((el) =>
-        pick(el, el.getAttribute("data-message-author-role") === "user" ? "user" : "assistant")
-      ),
+      [
+        ...document.querySelectorAll(
+          '[data-chatgpt-search-unit-key$=":user"], [data-chatgpt-search-unit-key$=":assistant"], [data-message-author-role]'
+        ),
+      ].map((el) => {
+        const key = el.getAttribute("data-chatgpt-search-unit-key") || "";
+        const role = el.getAttribute("data-message-author-role") || (key.endsWith(":user") ? "user" : "assistant");
+        return pick(el, role === "user" ? "user" : "assistant");
+      }),
     input: () => document.querySelector("#prompt-textarea"),
   };
   const SITES = {
@@ -34,7 +43,7 @@
     "claude.ai": {
       name: "Claude",
       messages: () =>
-        [...document.querySelectorAll("[data-testid='user-message'], .font-claude-response")].map((el) =>
+        [...document.querySelectorAll("[data-testid='user-message'], .font-claude-response, [data-testid='assistant-message']")].map((el) =>
           pick(el, el.getAttribute("data-testid") === "user-message" ? "user" : "assistant")
         ),
       input: () => document.querySelector("div[contenteditable='true']"),
@@ -77,6 +86,20 @@
         resolve(null); // the extension was reloaded while this tab stayed open
       }
     });
+  // Anything that goes wrong is logged and shown on the page for a few seconds, so a failure
+  // on a live site can be read off the screen instead of hunting through DevTools.
+  function report(where, e) {
+    console.error("[Relay]", where, e);
+    try {
+      document.getElementById("ezw-toast")?.remove();
+      const t = document.createElement("div");
+      t.id = "ezw-toast";
+      t.textContent = "Relay error (" + where + "): " + (e && e.message ? e.message : String(e));
+      t.style.cssText = "position:fixed;left:16px;bottom:16px;z-index:2147483647;max-width:480px;padding:10px 14px;border-radius:10px;background:#111;color:#fff;font:13px/1.4 system-ui;box-shadow:0 4px 20px rgba(0,0,0,.4)";
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 20000);
+    } catch {}
+  }
   const convId = () => (location.pathname.replace(/\/+$/, "") || "/new") + location.search;
 
   // ---- summarize on the device ----
@@ -106,13 +129,23 @@
       topic: firstUser ? firstUser.text.split("\n")[0].slice(0, 140) : "",
       items: lastAssistant ? bullets(lastAssistant).slice(0, 8) : [],
       messages: recent,
+      conv,
     };
   }
 
   // ---- capture ----
   let lastSig = "";
   async function capture() {
+    if (stopIfOrphaned()) return;
+    try {
+      await captureNow();
+    } catch (e) {
+      report("recording", e);
+    }
+  }
+  async function captureNow() {
     const msgs = site.messages().filter((m) => m.text);
+    send({ type: "badge", count: msgs.length }); // toolbar badge: messages Relay can read on this tab
     if (!msgs.length) return;
     const id = convId();
     const sig = id + ":" + msgs.length + ":" + msgs[msgs.length - 1].text.length;
@@ -126,17 +159,92 @@
       conv: { id, host: location.hostname, source: site.name, url: location.href, title: document.title, messages, updatedAt: Date.now() },
     });
   }
-  let timer;
-  new MutationObserver(() => {
+  let timer, poll;
+  const observer = new MutationObserver(() => {
     clearTimeout(timer);
     timer = setTimeout(capture, 1500);
-  }).observe(document.body, { childList: true, subtree: true, characterData: true });
+  });
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
   capture();
 
-  // ---- build prompts ----
-  function contextBlock(ctx) {
-    const lines = ctx.messages.map((m) => `${m.role === "user" ? "Me" : ctx.source}: ${m.text}`);
-    return `Context from my recent ${ctx.source} conversation (via Relay):\n${lines.join("\n")}\n\n`;
+  // ---- build the pasted summary ----
+  // The pasted text must not reveal which AI the chat came from, so brand names are
+  // scrubbed and roles are plain "Me" / "Assistant". Claude and Gemini are also ordinary
+  // words and names, so they are only scrubbed when they are the source or in a
+  // self-reference such as "I'm Claude".
+  const BRANDS = /\b(chat\s?gpt|gpt-?\d[\w.-]*|openai|anthropic|grok|xai|copilot|perplexity|deepseek|mistral|bard|llama|meta ai)\b/gi;
+  const SELF = /\b(i am|i'm|as|this is|called|named)\s+(claude|gemini)\b/gi;
+  function anonymize(text, source) {
+    let t = text.replace(BRANDS, "the assistant").replace(SELF, (_m, p) => p + " the assistant");
+    if (source && /^(claude|gemini)$/i.test(source)) t = t.replace(new RegExp("\\b" + source + "\\b", "gi"), "the assistant");
+    return t;
+  }
+
+  const clip = (t, n) => (t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t);
+  const firstSentence = (t) => (t.replace(/\s+/g, " ").match(/^.{20,}?[.!?](?=\s|$)/) || [t.replace(/\s+/g, " ")])[0];
+
+  // Fallback summary, built on the device with no model: the goal, what I asked, the key
+  // points of each answer, and where the conversation stopped.
+  function heuristicSummary(conv) {
+    const msgs = conv.messages;
+    const users = msgs.filter((m) => m.role === "user");
+    const bots = msgs.filter((m) => m.role === "assistant");
+    const out = [];
+    if (users[0]) out.push("What I wanted: " + clip(users[0].text.replace(/\s+/g, " "), 400));
+    if (users.length > 1) {
+      out.push("Things I asked along the way:");
+      users.slice(1, 8).forEach((m) => out.push("- " + clip(m.text.replace(/\s+/g, " "), 200)));
+    }
+    if (bots.length) {
+      out.push("Key points from the answers:");
+      bots.slice(-6).forEach((m) => {
+        const lis = (m.li || []).filter((l) => l.length > 1);
+        if (lis.length) lis.slice(0, 8).forEach((l) => out.push("- " + clip(l.replace(/\s+/g, " "), 220)));
+        else out.push("- " + clip(firstSentence(m.text), 220));
+      });
+    }
+    const last = users[users.length - 1];
+    if (last && users.length > 1) out.push("Where it stands: my latest question was: " + clip(last.text.replace(/\s+/g, " "), 300));
+    return out.join("\n");
+  }
+
+  // Preferred summary: Chrome's built-in on-device Summarizer, when its model is already
+  // installed. Returns null when unavailable so the caller falls back.
+  async function modelSummary(conv) {
+    try {
+      if (typeof Summarizer === "undefined" || (await Summarizer.availability()) !== "available") return null;
+      const s = await Summarizer.create({
+        type: "key-points",
+        format: "plain-text",
+        length: "long",
+        outputLanguage: "en",
+        sharedContext:
+          "A conversation between a user (Me) and an AI assistant. Keep the specifics: goals, names, numbers, constraints, decisions, options considered and open questions.",
+      });
+      const text = conv.messages.map((m) => (m.role === "user" ? "Me: " : "Assistant: ") + m.text).join("\n\n").slice(-24000);
+      const chunks = text.match(/[\s\S]{1,6000}/g) || [];
+      const parts = [];
+      for (const c of chunks) parts.push(await s.summarize(c));
+      s.destroy();
+      return parts.join("\n");
+    } catch {
+      return null;
+    }
+  }
+
+  const cache = new Map();
+  async function summaryBlock(ctx) {
+    const key = ctx.host + ":" + ctx.savedAt;
+    if (!cache.has(key)) {
+      const body = (await modelSummary(ctx.conv)) || heuristicSummary(ctx.conv);
+      cache.set(key, anonymize(body, ctx.source));
+    }
+    return (
+      "Background from an earlier conversation I had with another AI assistant (summarized). " +
+      "Use it as context, and do not repeat it back to me:\n\n" +
+      cache.get(key) +
+      "\n\n"
+    );
   }
 
   function suggestions(ctx) {
@@ -172,13 +280,34 @@
       b.onclick = fn;
       el.appendChild(b);
     };
-    add("Paste context", "ezw-primary", () => insert(contextBlock(ctx)));
-    suggestions(ctx).forEach((s) => add(s.label, "", () => insert(contextBlock(ctx) + s.prompt)));
+    const run = (extra) => async (e) => {
+      const b = e.currentTarget, label = b.textContent;
+      b.disabled = true;
+      b.textContent = "Summarizing…";
+      try {
+        insert((await summaryBlock(ctx)) + extra);
+      } catch (err) {
+        report("paste", err);
+      } finally {
+        b.disabled = false;
+        b.textContent = label;
+      }
+    };
+    add("Paste summary", "ezw-primary", run(""));
+    suggestions(ctx).forEach((s) => add(s.label, "", run(s.prompt)));
     el.querySelector(".ezw-x").onclick = () => el.remove();
     document.body.appendChild(el);
   }
 
   async function check() {
+    if (stopIfOrphaned()) return;
+    try {
+      await checkNow();
+    } catch (e) {
+      report("panel", e);
+    }
+  }
+  async function checkNow() {
     const conv = await send({ type: "latest", host: location.hostname });
     const existing = document.getElementById("ezw-panel");
     if (!conv) {
@@ -191,6 +320,17 @@
       document.getElementById("ezw-panel").dataset.t = String(ctx.savedAt);
     }
   }
-  setInterval(check, 3000);
+  poll = setInterval(check, 3000);
   check();
+
+  // When the extension is reloaded or updated, tabs that were already open keep this script
+  // running with a dead connection. Notice that and shut down quietly instead of erroring.
+  function stopIfOrphaned() {
+    if (chrome.runtime?.id) return false;
+    clearInterval(poll);
+    clearTimeout(timer);
+    observer.disconnect();
+    document.getElementById("ezw-panel")?.remove();
+    return true;
+  }
 })();
