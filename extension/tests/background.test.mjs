@@ -59,3 +59,17 @@ test("over budget, the oldest conversation goes first and the new one stays", as
   const hosts = (await call({ type: "list" })).map((c) => c.host);
   assert.deepEqual(hosts, ["c.com", "b.com"]);
 });
+
+test("the first AI used becomes the lead-off and stays it, even when it is evicted", async () => {
+  const { call, closeAll } = boot();
+  assert.equal(await call({ type: "leadoff" }), null);
+  await call({ type: "save", conv: conv("a.com", "1", 2, 1) });
+  await call({ type: "save", conv: conv("b.com", "1", 2, 2) });
+  assert.equal((await call({ type: "leadoff" })).host, "a.com");
+  const big = (host, at) => ({ ...conv(host, "1", 1, at), messages: [{ role: "user", text: "x".repeat(3_000_000) }] });
+  await call({ type: "save", conv: big("c.com", 3) });
+  await call({ type: "save", conv: big("d.com", 4) });
+  assert.equal((await call({ type: "leadoff" })).host, "a.com");
+  await closeAll();
+  assert.equal(await call({ type: "leadoff" }), null); // a new browser session starts a new lead-off
+});

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relay</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="icons/wallet-dark-48.png" alt="" width="22" height="22">
+    <span>Relay</span>
+  </header>
+  <p class="sub">How should your context travel to the next AI?</p>
+
+  <div role="radiogroup" aria-label="Baton mode">
+    <!-- Each option has an icon slot (.ico). Swap the inline SVG for your own icon files later. -->
+    <button type="button" role="radio" class="opt" data-mode="drop" aria-checked="false">
+      <span class="ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10"/><path d="M8 10l4 4 4-4"/><path d="M5 19h14"/></svg>
+      </span>
+      <span class="txt"><b>Baton drop</b><small>You pick it up. Nothing is pasted until you click.</small></span>
+    </button>
+    <button type="button" role="radio" class="opt" data-mode="pass" aria-checked="false">
+      <span class="ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14"/><path d="M13 7l5 5-5 5"/></svg>
+      </span>
+      <span class="txt"><b>Baton pass</b><small>Relay puts it into a new empty chat for you. It never sends it.</small></span>
+    </button>
+  </div>
+
+  <p class="foot">Nothing leaves your browser.</p>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+body{margin:0;width:300px;padding:14px;box-sizing:border-box;background:linear-gradient(160deg,#3a3a42,#222228);color:#f5f5f7;
+  font:13px/1.4 Montserrat,Inter,system-ui,sans-serif}
+header{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+header img{border-radius:6px}
+.sub{margin:8px 0 10px;opacity:.75;font-size:12px}
+.opt{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 8px;padding:10px 12px;text-align:left;cursor:pointer;font:inherit;color:inherit;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.22);border-radius:14px}
+.opt:hover{border-color:#fff}
+.opt .ico{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.1)}
+.opt .txt{display:flex;flex-direction:column;gap:2px}
+.opt small{opacity:.7;font-size:11px}
+.opt[aria-checked="true"]{background:linear-gradient(180deg,#fff,#c9c9cf);border-color:#fff;color:#0b0b0c}
+.opt[aria-checked="true"] .ico{background:rgba(0,0,0,.1)}
+.opt[aria-checked="true"] small{opacity:.75}
+.foot{margin:4px 0 0;opacity:.55;font-size:11px}

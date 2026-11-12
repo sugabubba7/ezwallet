@@ -33,6 +33,7 @@
   },
   "action": {
     "default_title": "Relay",
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/wallet-dark-16.png",
       "48": "icons/wallet-dark-48.png",
