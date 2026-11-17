@@ -30,8 +30,12 @@ def _pinned(t: Target) -> tuple[str, dict, dict]:
     return f"{t.scheme}://{netloc}{path}", {"Host": host_header}, {"sni_hostname": t.host}
 
 
-def fetch_article(url: str, policy: FetchPolicy) -> dict:
-    """Fetch one page. Raises GuardError (policy), TransientError (retryable) or ArticleError (permanent)."""
+def fetch_article(url: str, policy: FetchPolicy, hops: list[int] | None = None) -> dict:
+    """Fetch one page. Raises GuardError (policy), TransientError (retryable) or ArticleError (permanent).
+
+    `hops`, if given, is a one-element list that is incremented for every HTTP request actually sent (each redirect hop
+    is one request), so a caller can charge its fetch budget accurately even when the fetch fails.
+    """
     deadline = time.monotonic() + policy.total_timeout_seconds
     current = url
     timeout = httpx.Timeout(policy.timeout_seconds, connect=policy.timeout_seconds)
@@ -41,6 +45,8 @@ def fetch_article(url: str, policy: FetchPolicy) -> dict:
             pinned_url, headers, ext = _pinned(target)
             headers.update({"User-Agent": policy.user_agent, "Accept": "text/html,application/xhtml+xml,text/plain;q=0.8", "Accept-Encoding": "gzip"})
             try:
+                if hops is not None:
+                    hops[0] += 1
                 with client.stream("GET", pinned_url, headers=headers, extensions=ext) as resp:
                     if resp.is_redirect:
                         loc = resp.headers.get("location")

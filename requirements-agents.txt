@@ -1,0 +1,7 @@
+# Dependencies of the worker services (verifier, researcher) and the orchestrator. They deploy from the repo root.
+fastapi==0.115.12
+uvicorn==0.34.2
+pydantic==2.11.4
+httpx==0.28.1
+PyYAML==6.0.2
+python-dotenv==1.1.0

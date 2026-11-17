@@ -34,3 +34,26 @@ services:
         value: gemini-2.5-flash
       - key: SEED_DEMO_DATA
         value: "true"
+
+  # Verifier worker (assignment 3). Deploys from the repo root so it can share `kit/` and the A2 fetch guardrails.
+  # Keeps no data that must survive a restart; free instances sleep after 15 min idle and take ~1 min to wake.
+  - type: web
+    name: ezwallet-verifier
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements-agents.txt
+    startCommand: uvicorn verifier.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: VERIFIER_TOKEN
+        sync: false
+      - key: VERIFIER_LLM_BASE_URL
+        sync: false
+      - key: VERIFIER_LLM_API_KEY
+        sync: false
+      - key: VERIFIER_LLM_MODEL
+        sync: false
